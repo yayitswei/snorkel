@@ -1,16 +1,21 @@
 from grammar import Grammar
 from ricky import snorkel_rules, snorkel_ops
+from annotator import *
 
 class SemanticParser():
     def __init__(self):
-        self.grammar = Grammar(rules=snorkel_rules, ops=snorkel_ops)
+        annotators = [TokenAnnotator(), PunctuationAnnotator(), IntegerAnnotator()]
+        self.grammar = Grammar(rules=snorkel_rules, 
+                               ops=snorkel_ops, 
+                               annotators=annotators)
 
-    def parse(self, explanations, user_lists={}, verbose=False, return_parses=False):
+    def parse(self, explanations, candidates=None, user_lists={}, verbose=False, return_parses=False):
         """
         Accepts natural language explanations and returns parses
         """
         LFs = []
         parses = []
+        explanations = explanations if isinstance(explanations, list) else [explanations]
         for i, exp in enumerate(explanations):
             exp_parses = self.grammar.parse_input(exp, user_lists)
             for j, parse in enumerate(exp_parses):

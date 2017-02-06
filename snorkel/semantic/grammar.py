@@ -30,6 +30,7 @@ class Grammar(object):
         """
         input = input.lower()
         stopwords = ['there','is','are','the','a','an','of','from','away','to','word','words','letter','letters']
+        # import pdb; pdb.set_trace()
         tokens = self.corenlp.parse(input)
         tokens = [t for i, t in enumerate(tokens) if (
             t['word'] not in stopwords or
@@ -50,6 +51,8 @@ class Grammar(object):
         if self.start_symbol:
             parses = [parse for parse in parses if parse.rule.lhs == self.start_symbol]
         self.chart = chart
+        if len(parses) == 0:
+            import pdb; pdb.set_trace()
         return parses
 
     def add_rule(self, rule):

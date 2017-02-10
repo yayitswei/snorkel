@@ -1,4 +1,3 @@
-from snorkel import SnorkelSession
 from snorkel.models import Document, Sentence, candidate_subclass
 from snorkel.parser import TSVDocPreprocessor, CorpusParser
 from snorkel.candidates import Ngrams, CandidateExtractor
@@ -10,19 +9,19 @@ from load_external_annotations import load_external_labels
 import os
 import csv
 
+from snorkel.models import snorkel_postgres #TEMP
+
 class SnorkelModel(object):
-    def __init__(self, db=None, parallelism=1, seed=0, verbose=True):
-        if db:
-            os.environ['SNORKELDB'] = db
-        self.db = db
-        self.session = SnorkelSession()
+    def __init__(self, session, parallelism=1, seed=0, verbose=True):
+        self.session = session
         self.parallelism = parallelism
+        self.seed = seed
         self.verbose = verbose
 
     def parse(self, doc_preprocessor, clear=True):
         corpus_parser = CorpusParser()
         corpus_parser.apply(doc_preprocessor, parallelism=self.parallelism, clear=clear)
-    
+
     def extract(self, cand_extractor, sents, split=0, clear=True):
         cand_extractor.apply(sents, split=split, parallelism=self.parallelism, clear=clear)
 
@@ -39,26 +38,25 @@ class SnorkelModel(object):
         raise NotImplementedError
 
 
-Spouse = candidate_subclass('Spouse', ['person1', 'person2'])
 
 class SpouseModel(SnorkelModel):
-    def parse(self, train_path, max_train, dev_path, max_dev):
-        self.train_path = train_path
-        self.dev_path = dev_path
-        doc_preprocessor = TSVDocPreprocessor(train_path, max_docs=max_train)
-        SnorkelModel.parse(self, doc_preprocessor, clear=True)
+    def parse(self, path, max_docs=float('inf'), clear=True):
+        doc_preprocessor = TSVDocPreprocessor(path, max_docs=max_docs)
+        corpus_parser = CorpusParser()
+        corpus_parser.apply(doc_preprocessor, parallelism=self.parallelism, clear=clear)
+        # SnorkelModel.parse(self, doc_preprocessor, clear=clear)
         if self.verbose:
-            nTrainDocs = self.session.query(Document).count()
-            nTrainSent = self.session.query(Sentence).count()
-        doc_preprocessor = TSVDocPreprocessor(dev_path, max_docs=max_dev)
-        SnorkelModel.parse(self, doc_preprocessor, clear=False)
-        if self.verbose:
-            nDocs = self.session.query(Document).count()
-            nSent = self.session.query(Sentence).count()
-            nDevDocs = nDocs - nTrainDocs
-            nDevSent = nSent - nTrainSent
-            print "Split 0: {} Documents, {} Sentences".format(nTrainDocs, nTrainSent)
-            print "Split 1: {} Documents, {} Sentences".format(nDevDocs, nDevSent)
+            print("Documents: {}".format(self.session.query(Document).count()))
+            print("Sentences: {}".format(self.session.query(Sentence).count()))
+        # doc_preprocessor = TSVDocPreprocessor(dev_path, max_docs=max_dev)
+        # SnorkelModel.parse(self, doc_preprocessor, clear=False)
+        # if self.verbose:
+        #     nDocs = self.session.query(Document).count()
+        #     nSent = self.session.query(Sentence).count()
+        #     nDevDocs = nDocs - nTrainDocs
+        #     nDevSent = nSent - nTrainSent
+        #     print "Split 0: {} Documents, {} Sentences".format(nTrainDocs, nTrainSent)
+        #     print "Split 1: {} Documents, {} Sentences".format(nDevDocs, nDevSent)
 
     def extract(self, split=0, clear=True):
         def number_of_people(sentence):
@@ -81,6 +79,7 @@ class SpouseModel(SnorkelModel):
                     dev_doc_names.add(doc)
             return dev_doc_names
 
+        Spouse = candidate_subclass('Spouse', ['person1', 'person2'])
         ngrams         = Ngrams(n_max=3)
         person_matcher = PersonMatcher(longest_match_only=True)
         cand_extractor = CandidateExtractor(Spouse, 

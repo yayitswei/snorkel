@@ -40,7 +40,7 @@ class SemanticParser():
     def evaluate(self, examples, debug=False):
         """Returns a pandas DataFrame with the explanations and various per-explanation stats"""
         examples = examples if isinstance(examples, list) else [examples]
-        col_names = ['Correct', 'Incorrect', 'Redundant', 'Failed']
+        col_names = ['Correct', 'Incorrect', 'Redundant', 'Failed', 'Unknown']
         d = {}
         example_names = []
         
@@ -48,13 +48,12 @@ class SemanticParser():
         incorrect = []
         redundant = []
         failed = []
-        accuracy = []
+        unknown = []
+        # accuracy = []
         
         for i, example in enumerate(examples):
-            nCorrect = 0
-            nIncorrect = 0
-            nRedundant = 0
-            nFailed = 0
+            if debug: print("Example {}: {}".format(i, example.explanation))
+            nCorrect = nIncorrect = nRedundant = nFailed = nUnknown = 0
             semantics = set()
             parses = self.parse(
                         example.explanation, 
@@ -67,12 +66,15 @@ class SemanticParser():
                         nRedundant += 1
                     else:
                         semantics.add(parse.semantics)
-                        if debug:
-                            print parse.semantics
-                        if parse.function(example.candidate)==example.denotation:
-                            nCorrect += 1
+                        if example.candidate is None:
+                            nUnknown += 1
                         else:
-                            nIncorrect += 1
+                            if parse.function(example.candidate)==example.denotation:
+                                if debug:
+                                    print parse.semantics
+                                nCorrect += 1
+                            else:
+                                nIncorrect += 1
                 except:
                     nFailed += 1
             example_names.append('Example{}'.format(i))
@@ -80,6 +82,7 @@ class SemanticParser():
             incorrect.append(nIncorrect)
             redundant.append(nRedundant)
             failed.append(nFailed)
+            unknown.append(nUnknown)
             # if nCorrect == 0:
             #     accuracy.append(0.00)
             # elif nCorrect==1:
@@ -91,6 +94,7 @@ class SemanticParser():
         d['Incorrect'] = Series(data=incorrect, index=example_names)
         d['Redundant'] = Series(data=redundant, index=example_names)
         d['Failed'] = Series(data=failed, index=example_names)
+        d['Unknown'] = Series(data=unknown, index=example_names)
         
         return DataFrame(data=d, index=example_names)[col_names]
 

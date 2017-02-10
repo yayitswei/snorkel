@@ -250,7 +250,6 @@ spouse_examples = [
 #     "Label false because there is at least one coworker word between arg 1 and arg 2",
 #     "Label false because arg 1 is identical to arg 2",
 #     ]
-    # Base
     Example(
         explanation="Label false because the number of words between arg 1 and arg 2 is larger than 10",
         candidate=-5729816328165410632,
@@ -263,6 +262,30 @@ spouse_examples = [
         explanation="Label true because there is at least one spouse word in the words between arg 1 and arg 2",
         candidate=-3135315734051751361,
         denotation=1),
+    Example(
+        explanation="Label true because there is at least one spouse word within two words to the left of arg 1 or arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),
+    Example(
+        explanation="Label false because there are no spouse words in the sentence",
+        candidate=-8021416815354059709,
+        denotation=-1),
+    Example(
+        explanation="Label true because the word 'and' is between arg 1 and arg 2 and 'married' is to the right of arg 2",
+        candidate=None,
+        denotation=1),
+    Example(
+        explanation="Label false because there are no spouse words in the sentence",
+        candidate=-8021416815354059709,
+        denotation=-1),
+    Example(
+        explanation="Label false because there is at least one family word between arg 1 and arg 2",
+        candidate=-8692729291220282012,
+        denotation=-1),
+    Example(
+        explanation="Label false because arg 1 is identical to arg 2",
+        candidate=660552142898381681,
+        denotation=-1),
 ]
 
 def get_examples(which, candidates):
@@ -275,7 +298,7 @@ def get_examples(which, candidates):
     
     candidate_dict = {hash(c) : c for c in candidates}
     for example in examples:
-        if not isinstance(example.candidate, tuple):
+        if example.candidate and not isinstance(example.candidate, tuple):
             example.candidate = candidate_dict[hash(example.candidate)]
-    assert(example.candidate is not None for example in examples)
+    # assert(example.candidate is not None for example in examples)
     return examples

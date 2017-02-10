@@ -10,9 +10,10 @@ from util import CoreNLPHandler
 # Grammar ======================================================================
 
 class Grammar(object):
-    def __init__(self, rules=[], ops={}, annotators=[], start_symbol='$ROOT'):
+    def __init__(self, rules=[], ops={}, annotators=[], user_lists={}, start_symbol='$ROOT'):
         self.ops = ops
         self.annotators = annotators
+        self.user_lists = user_lists
         self.categories = set()
         self.lexical_rules = defaultdict(list)
         self.unary_rules = defaultdict(list)
@@ -21,28 +22,33 @@ class Grammar(object):
         self.corenlp = CoreNLPHandler()
         for rule in rules:
             self.add_rule(rule)
-        print('Created grammar with %d rules' % len(rules))
+        for annotator in annotators:
+            for rule in annotator.rules:
+                self.add_rule(rule)
+        if user_lists:
+            self.add_rule(Rule('$StringList', ('$StringList', '$Token'), lambda sems: sems[0]))
+        print('Created grammar with %d rules' % \
+            (len(self.lexical_rules) + len(self.unary_rules) + len(self.binary_rules)))
 
-    def parse_input(self, input, user_lists):
+    def parse_input(self, input):
         """
         Returns the list of parses for the given input which can be derived
         using this grammar.
         """
         input = input.lower()
-        stopwords = ['there','is','are','the','a','an','of','from','away','to','word','words','letter','letters']
-        # import pdb; pdb.set_trace()
         tokens = self.corenlp.parse(input)
-        tokens = [t for i, t in enumerate(tokens) if (
-            t['word'] not in stopwords or
-            tokens[max(i-1,0)]['pos'] == "``" or
-            tokens[min(i+1, len(tokens)-1)]['pos'] == "\'\'"
-            )
-        ]
+        # stopwords = ['there','is','are','the','a','an','of','from','away','to','word','words','letter','letters']
+        # tokens = [t for i, t in enumerate(tokens) if (
+        #     t['word'] not in stopwords or
+        #     tokens[max(i-1,0)]['pos'] == "``" or
+        #     tokens[min(i+1, len(tokens)-1)]['pos'] == "\'\'"
+        #     )
+        # ]
         words = [t['word'] for t in tokens]
         chart = defaultdict(list)
         for j in range(1, len(tokens) + 1):
             for i in range(j - 1, -1, -1):
-                self.apply_user_lists(chart, tokens, user_lists, i, j)
+                self.apply_user_lists(chart, tokens, i, j)
                 self.apply_annotators(chart, tokens, i, j)
                 self.apply_lexical_rules(chart, words, i, j)
                 self.apply_binary_rules(chart, i, j)
@@ -60,6 +66,7 @@ class Grammar(object):
             self.add_rule_containing_optional(rule)
         elif rule.is_lexical():
             self.lexical_rules[rule.rhs].append(rule)
+            self.add_absorption_rule(rule)
         elif rule.is_unary():
             self.unary_rules[rule.rhs].append(rule)
         elif rule.is_binary():
@@ -105,6 +112,13 @@ class Grammar(object):
             sem = lambda sems: rule.sem(sems[:first] + [None] + sems[first:])
         self.add_rule(Rule(rule.lhs, prefix + suffix, sem))
 
+    def add_absorption_rule(self, rule):
+        lhs = rule.lhs
+        rhs = (rule.lhs, '$Token')
+        new_rule = Rule(lhs, rhs, rule.sem)
+        if new_rule not in self.binary_rules[new_rule.rhs]:
+            self.binary_rules[new_rule.rhs].append(new_rule)
+
     def add_n_ary_rule(self, rule):
         """
         Handles adding a rule with three or more non-terminals on the RHS.
@@ -138,16 +152,15 @@ class Grammar(object):
         self.add_rule(Rule(rule.lhs, (rule.rhs[0], category),
                             lambda sems: rule.apply_semantics([sems[0]] + sems[1])))
 
-
-    def apply_user_lists(self, chart, tokens, user_lists, i, j):
-        """Add parses to chart cell (i, j) by applying annotators."""
-        if user_lists:
+    def apply_user_lists(self, chart, tokens, i, j):
+        """Add parses to chart cell (i, j) by applying user lists."""
+        if self.user_lists:
             words = [t['word'] for t in tokens]
             key = ' '.join(words[i:j])
-            if key in user_lists:
+            if key in self.user_lists:
                 lhs = '$StringList'
                 rhs = tuple(key.split())
-                semantics = tuple(['.list'] + [('.string', value) for value in user_lists[key]])
+                semantics = tuple(['.list'] + [('.string', value) for value in self.user_lists[key]])
                 rule = Rule(lhs, rhs, semantics)
                 chart[(i, j)].append(Parse(rule, words[i:j]))
 
@@ -231,6 +244,15 @@ class Rule(object):
     def __str__(self):
         """Returns a string representation of this Rule."""
         return 'Rule' + str((self.lhs, ' '.join(self.rhs), self.sem))
+
+    def __eq__(self, other):
+        return (self.lhs == other.lhs and self.rhs == other.rhs)
+    
+    def __ne__(self, other):
+        return (self.lhs != other.lhs or self.rhs != other.rhs)
+
+    def __hash__(self):
+        return hash((self.lhs, self.rhs))
 
     def apply_semantics(self, sems):
         # Note that this function would not be needed if we required that semantics

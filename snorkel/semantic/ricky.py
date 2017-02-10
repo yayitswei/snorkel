@@ -40,8 +40,8 @@ lexical_rules = [
 ]
 
 lexical_rules.extend(
-    [Rule('$BoolValue', w, ('.bool', True)) for w in ['true', 'True', 'correct']] +
-    [Rule('$BoolValue', w, ('.bool', False)) for w in ['false', 'False', 'incorrect', 'wrong']] +
+    [Rule('$True', w, ('.bool', True)) for w in ['true', 'True', 'correct']] +
+    [Rule('$False', w, ('.bool', False)) for w in ['false', 'False', 'incorrect', 'wrong']] +
     [Rule('$Or', w, '.or') for w in ['or', 'nor']] +
     [Rule('$Not', w, '.not') for w in ['not', "n't"]] +
     [Rule('$None', w, '.none') for w in ['none', 'not any', 'neither', 'no']] +
@@ -62,7 +62,9 @@ lexical_rules.extend(
     )
 
 unary_rules = [
-    Rule('$Bool', '$BoolValue', sems0),
+    Rule('$Bool', '$BoolLit', sems0),
+    Rule('$BoolLit', '$True', sems0),
+    Rule('$BoolLit', '$False', sems0),
     Rule('$Conj', '$And', sems0),
     Rule('$Conj', '$Or', sems0),
     Rule('$Inequals', '$LessThan', sems0),
@@ -83,7 +85,7 @@ unary_rules = [
 ]
 
 compositional_rules = [
-    Rule('$LF', '$Label $Bool ?$Because $Bool ?$Punctuation', lambda sems: (sems[0], sems[1], sems[3])),
+    Rule('$LF', '$Label $Bool $Because $Bool', lambda sems: (sems[0], sems[1], sems[3])),
     
     # Logicals
     Rule('$Bool', '$Bool $Conj $Bool', lambda sems: (sems[1], sems[0], sems[2])),

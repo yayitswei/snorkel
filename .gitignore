@@ -36,6 +36,7 @@ tutorials/intro/data/gold_labels.tsv
 tutorials/intro/snorkel.db
 
 tutorials/semparse/data/*.tsv
+tutorials/semparse/data/before_split/
 tutorials/*/SparseLR*
 
 tutorials/tables/data/hardware/

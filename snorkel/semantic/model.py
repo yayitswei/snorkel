@@ -19,8 +19,9 @@ class SnorkelModel(object):
         self.verbose = verbose
 
     def parse(self, doc_preprocessor, clear=True):
-        corpus_parser = CorpusParser()
-        corpus_parser.apply(doc_preprocessor, parallelism=self.parallelism, clear=clear)
+        raise NotImplementedError
+        # corpus_parser = CorpusParser()
+        # corpus_parser.apply(doc_preprocessor, parallelism=self.parallelism, clear=clear)
 
     def extract(self, cand_extractor, sents, split=0, clear=True):
         cand_extractor.apply(sents, split=split, parallelism=self.parallelism, clear=clear)
@@ -71,6 +72,9 @@ class SpouseModel(SnorkelModel):
             return count
 
         def get_dev_doc_names():
+            # TEMP
+            self.dev_path = 'data/articles_dev.tsv'
+            # TEMP
             dev_doc_names = set()
             with open(os.environ['SNORKELHOME'] + '/tutorials/semparse/{}'.format(self.dev_path)) as csvin:
                 reader = csv.reader(csvin, delimiter='\t')

@@ -82,7 +82,7 @@ def LF_distant_supervision_last_names(c):
     p1n, p2n = last_name(p1), last_name(p2)
     return 1 if (p1 != p2) and ((p1n, p2n) in last_names or (p2n, p1n) in last_names) else 0
 
-def get_python_lfs():
+def get_spouse_lfs():
     LFs = [
         LF_distant_supervision, LF_distant_supervision_last_names, 
         LF_husband_wife, LF_husband_wife_left_window, LF_same_last_name,

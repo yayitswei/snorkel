@@ -14,8 +14,12 @@ class Example(object):
         print('%-12s %s' % ('candidate', self.candidate))
         print('%-12s %d' % ('denotation', self.denotation))
 
-def get_examples(candidate=None):
-    return [
+
+# -7563346943193853808 =>
+# "\n \nIt has been almost two years since Klaus Andres, 71, was handed a life 
+# sentence for the 2011 killing of wife Li Ping Cao."
+
+test_examples = [
     # Base
     Example(
         explanation="label True because True",
@@ -119,97 +123,102 @@ def get_examples(candidate=None):
     # Left words
     Example(
         explanation="label True because 'wife' is in the words left of arg 2",
-        candidate=candidate,
+        candidate=-7563346943193853808,
         denotation=1),    
     # Right words
     Example(
-        explanation="label True because 'elected' is in the words to the right of arg 1",
-        candidate=candidate,
+        explanation="label True because 'wife' is in the words to the right of arg 1",
+        candidate=-7563346943193853808,
         denotation=1),    
     # Between words
     Example(
         explanation="label True because 'wife' is between arg 1 and arg 2",
-        candidate=candidate,
+        candidate=-7563346943193853808,
         denotation=1),    
     # NER tags
     Example(
         explanation="label True because a person is to the left of arg 2",
-        candidate=candidate,
+        candidate=-7563346943193853808,
         denotation=1),
     # POS tags
     Example(
         explanation="label True because a noun is between arg 1 and arg 2",
-        candidate=candidate,
+        candidate=-7563346943193853808,
         denotation=1),
     # Count
     Example(
-        explanation="label True because the number of words between arg 1 and arg 2 is less than 10",
-        candidate=candidate,
+        explanation="label True because the number of words between arg 1 and arg 2 is less than 20",
+        candidate=-7563346943193853808,
         denotation=1),
     # Index
     Example(
-        explanation="label True because the second word to the left of arg 2 equals 'wife'",
-        candidate=candidate,
+        explanation="label True because the first word to the left of arg 2 equals 'wife'",
+        candidate=-7563346943193853808,
         denotation=1),
     # Slice0
     Example(
         explanation="label True because 'wife' is within two words to the left of arg 2",
-        candidate=candidate,
+        candidate=-7563346943193853808,
         denotation=1),
     # # Slice1
     # Example(
     #     explanation="label True because 'part' is within two words to the right of arg 2",
-    #     candidate=candidate,
+    #     candidate=-7563346943193853808,
     #     denotation=1),
     # # Slice2
     # Example(
     #     explanation="label True because 'lawyer' is within two words of arg 1",
-    #     candidate=candidate,
+    #     candidate=-7563346943193853808,
     #     denotation=1),
     # # Slice3
     # Example(
     #     explanation="label True because the 'lawyer' is more than two words away from arg 2",
-    #     candidate=candidate,
+    #     candidate=-7563346943193853808,
     #     denotation=1),
     # Merge
     Example(
         explanation="label True because 'wife' is to the left of arg 1 or arg 2",
-        candidate=candidate,
+        candidate=-7563346943193853808,
         denotation=1),
-    # Intersection
+    # Intersection0
     Example(
-        explanation="label True because there is at least one word from ('red', 'green', 'blue') in ('blue', 'bird', 'fly')",
-        candidate=candidate,
+        explanation="label True because there is at least one word from colors in the bluebird words",
+        candidate=('foo', 'bar'),
         denotation=1),
+    # Intersection1
+    Example(
+        explanation="label False because less than two colors words are in bluebird",
+        candidate=('foo', 'bar'),
+        denotation=-1),
     # Disjoint
     Example(
-        explanation="label True because there are no words from ('red', 'green', 'yellow') in ('blue', 'bird', 'fly')",
-        candidate=candidate,
+        explanation="label True because there are no colors words in the greek words",
+        candidate=('foo', 'bar'),
         denotation=1),
     # All
     Example(
-        explanation='label True because all of the letters ["b", "c", "d"] are lowercase',
-        candidate=candidate,
+        explanation='label True because all of the colors are lowercase',
+        candidate=('foo', 'bar'),
         denotation=1),
     # Any
     Example(
-        explanation='label True because any of the words ["B", "c", "D"] are lowercase',
-        candidate=candidate,
+        explanation='label True because any of the words letters are lowercase',
+        candidate=('foo', 'bar'),
         denotation=1),
     # None
     Example(
-        explanation='label True because none of ["a", "b", "c", "d"] are capitalized',
-        candidate=candidate,
+        explanation='label True because none of the smalls are capitalized',
+        candidate=('foo', 'bar'),
         denotation=1),
     # Sentence
     Example(
         explanation='label True because the word "wife" is in the sentence',
-        candidate=candidate,
+        candidate=-7563346943193853808,
         denotation=1),
     # Composition0
     Example(
-        explanation="label True because 'wife' is between arg 1 and arg 2 and 'governor' is to the left of arg 1",
-        candidate=candidate,
+        explanation="label True because 'wife' is between arg 1 and arg 2 and 'years' is to the left of arg 1",
+        candidate=-7563346943193853808,
         denotation=1),
     # Composition1
     Example(
@@ -218,12 +227,55 @@ def get_examples(candidate=None):
         denotation=1),
     # Composition2
     Example(
-        explanation="label True because there is at least one of ('husband', 'wife', 'spouse') between arg 1 and arg 2",
-        candidate=candidate,
+        explanation="label True because there is at least one spouse word between arg 1 and arg 2",
+        candidate=-7563346943193853808,
         denotation=1),
     # Composition3
-    # Example(
-    #     explanation="label True because there is at least one spouse word within two words to the left of arg 1 or arg 2",
-    #     candidate=candidate,
-    #     denotation=1),
+    Example(
+        explanation="label True because there is at least one spouse word within two words to the left of arg 1 or arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),
 ]
+
+spouse_examples = [
+#     explanations = [
+#     "Label false because the number of words between arg 1 and arg 2 is larger than 10",
+#     "Label false because there is a person between arg 1 and arg 2",
+#     "Label true because there is at least one spouse word in the words between arg 1 and arg 2",
+#     "Label true because there is at least one spouse word within two words to the left of arg 1 or arg 2",
+#     "Label false because there are no spouse words in the sentence",
+#     "Label true because the word 'and' is between arg 1 and arg 2 and 'married' is to the right of arg 2",
+#     "Label false because there is at least one family word between arg 1 and arg 2",
+#     "Label false because there is at least one family word within two words to the left of arg 1 or arg 2",
+#     "Label false because there is at least one coworker word between arg 1 and arg 2",
+#     "Label false because arg 1 is identical to arg 2",
+#     ]
+    # Base
+    Example(
+        explanation="Label false because the number of words between arg 1 and arg 2 is larger than 10",
+        candidate=-5729816328165410632,
+        denotation=-1),
+    Example(
+        explanation="Label false because there is a person between arg 1 and arg 2",
+        candidate=-8692729291220282012,
+        denotation=-1),
+    Example(
+        explanation="Label true because there is at least one spouse word in the words between arg 1 and arg 2",
+        candidate=-3135315734051751361,
+        denotation=1),
+]
+
+def get_examples(which, candidates):
+    if which=='test':
+        examples = test_examples
+    elif which=='spouse':
+        examples = spouse_examples
+    else:
+        raise Exception("Invalid example set provided.")
+    
+    candidate_dict = {hash(c) : c for c in candidates}
+    for example in examples:
+        if not isinstance(example.candidate, tuple):
+            example.candidate = candidate_dict[hash(example.candidate)]
+    assert(example.candidate is not None for example in examples)
+    return examples

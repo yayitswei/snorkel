@@ -51,6 +51,9 @@ class Candidate(SnorkelBase):
 
     def __len__(self):
         return len(self.__argnames__)
+    
+    def __hash__(self):
+        return hash(tuple(c.stable_id for c in self.get_contexts()))
 
 
 def candidate_subclass(class_name, args, table_name=None):

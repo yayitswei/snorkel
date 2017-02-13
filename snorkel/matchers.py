@@ -1,12 +1,14 @@
 import os
 import re
 import warnings
+
+# NOTE: When the following five lines are uncommented, CorpusParser with parallelism > 1 breaks
 # Travis will not import the PorterStemmer
-if 'CI' not in os.environ:
-    try:
-        from nltk.stem.porter import PorterStemmer
-    except ImportError:
-        warnings.warn("nltk not installed- some default functionality may be absent.")
+# if 'CI' not in os.environ:
+#     try:
+#         from nltk.stem.porter import PorterStemmer
+#     except ImportError:
+#         warnings.warn("nltk not installed- some default functionality may be absent.")
 
 
 class Matcher(object):

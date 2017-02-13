@@ -1,6 +1,6 @@
 from snorkel.models import Document, Sentence, candidate_subclass
-from snorkel.parser import TSVDocPreprocessor, CorpusParser
-from snorkel.candidates import Ngrams, CandidateExtractor
+from snorkel.parser import CorpusParser, TSVDocPreprocessor, XMLMultiDocPreprocessor
+from snorkel.candidates import Ngrams, CandidateExtractor, PretaggedCandidateExtractor
 from snorkel.matchers import PersonMatcher
 from snorkel.annotations import FeatureAnnotator
 
@@ -8,8 +8,9 @@ from load_external_annotations import load_external_labels
 
 import os
 import csv
+import cPickle
 
-from snorkel.models import snorkel_postgres #TEMP
+ChemicalDisease = candidate_subclass('ChemicalDisease', ['chemical', 'disease'])
 
 class SnorkelModel(object):
     def __init__(self, session, parallelism=1, seed=0, verbose=True):
@@ -19,9 +20,9 @@ class SnorkelModel(object):
         self.verbose = verbose
 
     def parse(self, doc_preprocessor, clear=True):
-        raise NotImplementedError
-        # corpus_parser = CorpusParser()
-        # corpus_parser.apply(doc_preprocessor, parallelism=self.parallelism, clear=clear)
+        corpus_parser = CorpusParser()
+        corpus_parser.apply(doc_preprocessor, count=doc_preprocessor.max_docs, 
+                            parallelism=self.parallelism, clear=clear)
 
     def extract(self, cand_extractor, sents, split=0, clear=True):
         cand_extractor.apply(sents, split=split, parallelism=self.parallelism, clear=clear)
@@ -38,17 +39,51 @@ class SnorkelModel(object):
     def classify(self):
         raise NotImplementedError
 
-
-
-class SpouseModel(SnorkelModel):
-    def parse(self, path, max_docs=float('inf'), clear=True):
-        doc_preprocessor = TSVDocPreprocessor(path, max_docs=max_docs)
-        corpus_parser = CorpusParser()
-        corpus_parser.apply(doc_preprocessor, parallelism=self.parallelism, clear=clear)
-        # SnorkelModel.parse(self, doc_preprocessor, clear=clear)
+class CDRModel(SnorkelModel):
+    def parse(self, file_path='data/CDR.BioC.xml', max_docs=float('inf'), clear=True):
+        doc_preprocessor = XMLMultiDocPreprocessor(
+            path=file_path,
+            doc='.//document',
+            text='.//passage/text/text()',
+            id='.//id/text()',
+            max_docs=max_docs
+        )
+        SnorkelModel.parse(self, doc_preprocessor, clear=clear)
         if self.verbose:
             print("Documents: {}".format(self.session.query(Document).count()))
             print("Sentences: {}".format(self.session.query(Sentence).count()))
+
+    def extract(self, clear=True):
+        with open('data/doc_ids.pkl', 'rb') as f:
+            train_ids, dev_ids, test_ids = cPickle.load(f)
+        train_ids, dev_ids, test_ids = set(train_ids), set(dev_ids), set(test_ids)
+
+        train_sents, dev_sents, test_sents = set(), set(), set()
+        docs = self.session.query(Document).order_by(Document.name).all()
+        for i, doc in enumerate(docs):
+            for s in doc.sentences:
+                if doc.name in train_ids:
+                    train_sents.add(s)
+                elif doc.name in dev_ids:
+                    dev_sents.add(s)
+                elif doc.name in test_ids:
+                    test_sents.add(s)
+                else:
+                    raise Exception('ID <{0}> not found in any id set'.format(doc.name))
+
+        candidate_extractor = PretaggedCandidateExtractor(ChemicalDisease, ['Chemical', 'Disease'])
+        candidate_extractor.apply(train_sents, split=0)
+        print "Number of candidates:", self.session.query(ChemicalDisease).count()
+        # for k, sents in enumerate([train_sents, dev_sents, test_sents]):
+        #     SnorkelModel.extract(self, candidate_extractor, sents, split=k, clear=clear)
+        #     if self.verbose:
+        #         print("Candidates: {}".format(
+        #             self.session.query(ChemicalDisease).filter(ChemicalDisease.split == k).count()))
+
+class SpouseModel(SnorkelModel):
+    def parse(self, file_path, max_docs=float('inf'), clear=True):
+        doc_preprocessor = TSVDocPreprocessor(file_path, max_docs=max_docs)
+        SnorkelModel.parse(self, doc_preprocessor, clear=clear)
         # doc_preprocessor = TSVDocPreprocessor(dev_path, max_docs=max_dev)
         # SnorkelModel.parse(self, doc_preprocessor, clear=False)
         # if self.verbose:
@@ -85,11 +120,11 @@ class SpouseModel(SnorkelModel):
 
         Spouse = candidate_subclass('Spouse', ['person1', 'person2'])
         ngrams         = Ngrams(n_max=3)
-        person_matcher = PersonMatcher(longest_match_only=True)
-        cand_extractor = CandidateExtractor(Spouse, 
-                                            [ngrams, ngrams], 
-                                            [person_matcher, person_matcher],
-                                            symmetric_relations=False)
+        # person_matcher = PersonMatcher(longest_match_only=True)
+        # cand_extractor = CandidateExtractor(Spouse, 
+        #                                     [ngrams, ngrams], 
+        #                                     [person_matcher, person_matcher],
+        #                                     symmetric_relations=False)
         
         dev_doc_names = get_dev_doc_names()
         docs = self.session.query(Document).order_by(Document.name).all()

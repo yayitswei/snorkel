@@ -1,3 +1,19 @@
+import bz2
+import cPickle
+import re
+
+from snorkel.lf_helpers import (
+    get_tagged_text,
+    rule_regex_search_tagged_text,
+    rule_regex_search_btw_AB,
+    rule_regex_search_btw_BA,
+    rule_regex_search_before_A,
+    rule_regex_search_before_B,
+)
+
+with bz2.BZ2File('data/ctd.pkl.bz2', 'rb') as ctd_f:
+    ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
+
 def cand_in_ctd_unspecified(c):
     return 1 if c.get_cids() in ctd_unspecified else 0
 
@@ -6,6 +22,8 @@ def cand_in_ctd_therapy(c):
 
 def cand_in_ctd_marker(c):
     return 1 if c.get_cids() in ctd_marker else 0
+
+### begin LFs
 
 def LF_in_ctd_unspecified(c):
     """
@@ -24,16 +42,6 @@ def LF_in_ctd_marker(c):
     Label true if the canonical ids are in ctd_marker
     """
     return cand_in_ctd_marker(c)
-
-import re
-from snorkel.lf_helpers import (
-    get_tagged_text,
-    rule_regex_search_tagged_text,
-    rule_regex_search_btw_AB,
-    rule_regex_search_btw_BA,
-    rule_regex_search_before_A,
-    rule_regex_search_before_B,
-)
 
 # List to parenthetical
 def ltp(x):

@@ -67,7 +67,6 @@ class DocPreprocessor(object):
     def generate(self):
         """
         Parses a file or directory of files into a set of Document objects.
-
         """
         doc_count = 0
         for fp in self._get_files(self.path):
@@ -157,9 +156,9 @@ class XMLMultiDocPreprocessor(DocPreprocessor):
 
     **Note: Include the full document XML etree in the attribs dict with keep_xml_tree=True**
     """
-    def __init__(self, path, doc='.//document', text='./text/text()', id='./id/text()',
-                    keep_xml_tree=False):
-        DocPreprocessor.__init__(self, path)
+    def __init__(self, path, doc='.//document', text='./text/text()', id='./id/text()', 
+                 max_docs=float('inf'), keep_xml_tree=False):
+        DocPreprocessor.__init__(self, path, max_docs=max_docs)
         self.doc = doc
         self.text = text
         self.id = id

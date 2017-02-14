@@ -39,8 +39,16 @@ class SemanticParser():
                 print("{} LFs created from {} explanations".format(len(LFs), len(explanations)))
             return LFs
 
-    def evaluate(self, examples, show_explanation=False, show_correct=False, show_incorrect=False):
+    def evaluate(self, examples, 
+                show_explanation=False, 
+                show_correct=False, 
+                show_incorrect=False,
+                show_redundant=False,
+                show_failed=False,
+                show_all=False):
         """Returns a pandas DataFrame with the explanations and various per-explanation stats"""
+        if show_all:
+            show_correct = show_incorrect = show_redundant = show_failed = True
         examples = examples if isinstance(examples, list) else [examples]
         col_names = ['Correct', 'Incorrect', 'Redundant', 'Failed', 'Unknown']
         d = {}
@@ -64,6 +72,7 @@ class SemanticParser():
             for parse in parses:
                 try:
                     if parse.semantics in semantics:
+                        if show_redundant: print(parse.semantics)
                         nRedundant += 1
                     else:
                         semantics.add(parse.semantics)
@@ -77,6 +86,9 @@ class SemanticParser():
                                 if show_incorrect: print(parse.semantics)
                                 nIncorrect += 1
                 except:
+                    if show_failed: print(parse.semantics)
+                    print parse.function(example.candidate)
+                    import pdb; pdb.set_trace()
                     nFailed += 1
             example_names.append('Example{}'.format(i))
             correct.append(nCorrect)

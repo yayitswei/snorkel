@@ -1,11 +1,12 @@
 from __future__ import print_function
 
+from util import CoreNLPHandler
+from helpers import lf_helpers
+
 from collections import defaultdict, Iterable
 from itertools import product
 from six import StringIO
 from types import FunctionType
-
-from util import CoreNLPHandler
 
 # Grammar ======================================================================
 
@@ -29,7 +30,7 @@ class Grammar(object):
             for rule in annotator.rules:
                 self.add_rule(rule)
         if user_lists:
-            self.add_rule(Rule('$StringList', ('$StringList', '$Token'), lambda sems: sems[0]))
+            self.add_rule(Rule('$UserList', ('$UserList', '$Token'), lambda sems: sems[0]))
         print('Created grammar with %d rules' % \
             (len(self.lexical_rules) + len(self.unary_rules) + len(self.binary_rules)))
 
@@ -61,6 +62,7 @@ class Grammar(object):
             parses = [parse for parse in parses if parse.rule.lhs == self.start_symbol]
         self.chart = chart
         if len(parses) == 0:
+            self.print_chart(nested=False, words=words)
             import pdb; pdb.set_trace()
         return parses
 
@@ -162,9 +164,9 @@ class Grammar(object):
             words = [t['word'] for t in tokens]
             key = ' '.join(words[i:j])
             if key in self.user_lists:
-                lhs = '$StringList'
+                lhs = '$UserList'
                 rhs = tuple(key.split())
-                semantics = tuple(['.list'] + [('.string', value) for value in self.user_lists[key]])
+                semantics = ('.user_list', ('.string', key))
                 rule = Rule(lhs, rhs, semantics)
                 chart[(i, j)].append(Parse(rule, words[i:j]))
 
@@ -208,7 +210,8 @@ class Grammar(object):
                 return op(*args) if args else op
             else:
                 return semantics
-        return recurse(parse.semantics)
+        LF = recurse(parse.semantics)
+        return lambda candidate: LF({'lf_helpers': lf_helpers(), 'user_lists': self.user_lists, 'candidate': candidate})
 
     def print_grammar(self):
         def all_rules(rule_index):
@@ -223,16 +226,21 @@ class Grammar(object):
         print('Binary rules:')
         print_rules_sorted(all_rules(self.binary_rules))
 
-    def print_chart(self):
+    def print_chart(self, nested=False, words=None):
         """Print the chart.  Useful for debugging."""
         spans = sorted(list(self.chart.keys()), key=(lambda span: span[0]))
         spans = sorted(spans, key=(lambda span: span[1] - span[0]))
         for span in spans:
             if len(self.chart[span]) > 0:
                 print('%-12s' % str(span), end=' ')
-                print(self.chart[span][0])
-                for entry in self.chart[span][1:]:
-                    print('%-12s' % ' ', entry)
+                if nested:
+                    print(self.chart[span][0])
+                    for entry in self.chart[span][1:]:
+                        print('%-12s' % ' ', entry)
+                else:
+                    print(' '.join(words[span[0]:span[1]]))
+                    for entry in self.chart[span]:
+                        print('%-12s' % ' ', entry.rule.lhs)
 
 # Rule =========================================================================
 

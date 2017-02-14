@@ -41,9 +41,6 @@ class CoreNLPHandler(object):
                         backoff_factor=0.1,
                         status_forcelist=[ 500, 502, 503, 504 ])
         self.requests_session.mount('http://', HTTPAdapter(max_retries=retries))
-        
-        # Use this for recongizing PTB tokens
-        self.ptb_rgx = re.compile(r'-[A-Z]{2}B-')
 
     def _kill_pserver(self):
         if self.server_pid is not None:
@@ -54,11 +51,6 @@ class CoreNLPHandler(object):
 
     def parse(self, text):
         """Parse a raw document as a string into a list of sentences"""
-        def ptb_clean(text):
-            for ptb_match in self.ptb_rgx.finditer(text): 
-                text = text.replace(ptb_match.group(0), PTB[ptb_match.group(0)])
-            return text
-
         if len(text.strip()) == 0:
             return
         if isinstance(text, unicode):

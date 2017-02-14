@@ -31,7 +31,7 @@ class TokenAnnotator(Annotator):
 
 class PunctuationAnnotator(Annotator):
     def __init__(self):
-        self.categories = ['$OpenQuote', '$CloseQuote', '$OpenParen', '$CloseParen']
+        self.categories = ['$Quote', '$OpenParen', '$CloseParen']
         Annotator.__init__(self)
     
     def annotate(self, tokens):

@@ -1,5 +1,7 @@
+from __future__ import print_function
+
+from pdb import set_trace as t
 from grammar import Rule
-from helpers import lf_helpers
 
 # Helpers ======================================================================
 def sems0(sems):
@@ -22,7 +24,6 @@ lexical_rules = [
     # logic
     Rule('$And', 'and', '.and'),
     Rule('$All', 'all', '.all'),
-    Rule('$Any', 'any', '.any'),
     # direction
     Rule('$LeftTokens', 'left', '.lefttokens'),
     Rule('$RightTokens', 'right', '.righttokens'),
@@ -43,13 +44,14 @@ lexical_rules.extend(
     [Rule('$True', w, ('.bool', True)) for w in ['true', 'True', 'correct']] +
     [Rule('$False', w, ('.bool', False)) for w in ['false', 'False', 'incorrect', 'wrong']] +
     [Rule('$Or', w, '.or') for w in ['or', 'nor']] +
+    [Rule('$Any', w, '.any') for w in ['any', 'a']] +
     [Rule('$Not', w, '.not') for w in ['not', "n't"]] +
     [Rule('$None', w, '.none') for w in ['none', 'not any', 'neither', 'no']] +
     [Rule('$Because', w) for w in ['because', 'since', 'if']] +
     [Rule('$Upper', w, '.upper') for w in ['upper', 'uppercase', 'upper case', 'all caps', 'all capitalized']] +
     [Rule('$Lower', w, '.lower') for w in ['lower', 'lowercase', 'lower case']] +
     [Rule('$Capital', w, '.capital') for w in ['capital', 'capitals', 'capitalized']] +
-    [Rule('$Equals', w, '.equals') for w in ['equal', 'equals', '=', '==', 'same ?as', 'identical']] + 
+    [Rule('$Equals', w, '.equals') for w in ['is', 'equal', 'equals', '=', '==', 'same ?as', 'identical']] + 
     [Rule('$LessThan', w, '.less') for w in ['less than', 'smaller than', '<']] +
     [Rule('$AtMost', w, '.atmost') for w in ['at most', 'no larger than', 'less than or equal', 'within', '<=']] +
     [Rule('$MoreThan', w, '.more') for w in ['more than', 'greater than', 'larger than', '>']] + 
@@ -77,6 +79,7 @@ unary_rules = [
     Rule('$Direction', '$RightTokens', sems0),
     Rule('$POS', '$NounPOS', sems0),
     Rule('$POS', '$NumberPOS', sems0),
+    Rule('$StringList', '$UserList', sems0),
     Rule('$List', '$StringList', sems0),
     Rule('$List', '$IntList', sems0),
     # ArgX may be treated as an object or a string (referring to its textual contents)
@@ -95,11 +98,11 @@ compositional_rules = [
     Rule('$Bool', '$None $BoolList', sems_in_order),
 
     # Strings
-    Rule('$IncompleteString', '$Quote $Token', lambda sems: [sems[1]]),
-    Rule('$IncompleteString', '$IncompleteString $Token', lambda sems: sems[0] + [sems[1]]),
-    Rule('$String', '$IncompleteString $Quote', lambda sems: ('.string', ' '.join(sems[0]))),
+    Rule('$StringStub', '$Quote $Token', lambda sems: [sems[1]]),
+    Rule('$StringStub', '$StringStub $Token', lambda sems: sems[0] + [sems[1]]),
+    Rule('$String', '$StringStub $Quote', lambda sems: ('.string', ' '.join(sems[0]))),
     
-    Rule('$Bool', '$String $StringToBool', lambda sems: tuple(list(sems[1]) + [sems[0]])),
+    Rule('$Bool', '$String $StringToBool', lambda sems: ('.call', sems[1], sems[0])),
     Rule('$BoolList', '$StringList $StringToBool', lambda sems: tuple(['.list'] + [tuple(list(sems[1]) + [x]) for x in sems[0][1:]])),
     
     Rule('$StringToBool', '$Lower', lambda sems: (sems[0],)),
@@ -107,14 +110,14 @@ compositional_rules = [
     Rule('$StringToBool', '$Capital', lambda sems: (sems[0],)),
     Rule('$StringToBool', '$StartsWith $String', sems_in_order),
     Rule('$StringToBool', '$EndsWith $String', sems_in_order),
-    Rule('$StringToBool', '?$In $String', lambda sems: ('.in', sems[1])),
-    Rule('$StringToBool', '?$In $StringList', lambda sems: ('.in', sems[1])),
+    Rule('$StringToBool', '$In $String', sems_in_order),
+    Rule('$StringToBool', '$In $StringList', sems_in_order),
     Rule('$StringToBool', '$Contains $String', lambda sems: ('.contains', sems[1])),
     Rule('$StringToBool', '$Equals $String', sems_in_order),
     
-    Rule('$StringListStart', '?$ListWord $OpenParen $String', lambda sems: ('.list', sems[2])),
-    Rule('$StringListStart', '$StringListStart ?$Separator ?$And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
-    Rule('$StringList', '$StringListStart $CloseParen', sems0),
+    Rule('$StringListStub', '?$ListWord $OpenParen $String', lambda sems: ('.list', sems[2])),
+    Rule('$StringListStub', '$StringListStub ?$Separator ?$And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
+    Rule('$StringList', '$StringListStub $CloseParen', sems0),
     
     # Integers
     Rule('$BoolList', '$IntList $IntToBool', lambda sems: tuple(['.list'] + [tuple(list(sems[1]) + [x]) for x in sems[0][1:]])),
@@ -159,13 +162,15 @@ snorkel_rules = lexical_rules + unary_rules + compositional_rules
 
 snorkel_ops = {
     # root
-    '.root': lambda x: lambda c: x({'lf_helpers': lf_helpers(), 'candidate': c}),
-    '.label': lambda x, y: lambda c: (-1 if not x(c) else 1) if y(c) else 0,
+    '.root': lambda x: lambda c: x(c),
+    '.label': lambda x, y: lambda c: (-1 if not x(c) else 1) if y(c)==True else 0,
     # primitives
     '.bool': lambda x: lambda c: x,
     '.string': lambda x: lambda c: x,
     '.int': lambda x: lambda c: x,
     '.list': lambda *x: lambda c: [z(c) for z in x],
+    '.user_list': lambda x: lambda c: c['user_lists'][x(c)],
+    '.call': lambda *x: lambda c: x[0](c) if len(x)==1 else x[0](c)(x[1](c)), # TODO: generalize to more inputs?
     # logic
     '.and': lambda x, y: lambda c: x(c) and y(c),
     '.or': lambda x, y: lambda c: x(c) or y(c),
@@ -180,11 +185,11 @@ snorkel_ops = {
     '.more': lambda x, y: lambda c: y(c) > x(c),
     '.atleast': lambda x, y: lambda c: y(c) >= x(c),
     # string functions
-    '.upper': lambda x: lambda c: x(c).isupper(),
-    '.lower': lambda x: lambda c: x(c).islower(),
-    '.capital': lambda x: lambda c: x(c)[0].isupper(),
-    '.startswith': lambda x, y: lambda c: y(c).startswith(x(c)),
-    '.endswith': lambda x, y: lambda c: y(c).endswith(x(c)),
+    '.upper': lambda c: lambda x: x.isupper(),
+    '.lower': lambda c: lambda x: x.islower(),
+    '.capital': lambda c: lambda x: x[0].isupper(),
+    '.startswith': lambda x: lambda c: lambda y: y.startswith(x(c)),
+    '.endswith': lambda x: lambda c: lambda y: y.endswith(x(c)),
     # lists
     '.index': lambda x, y: lambda c: x(c)[max(0, y(c) - 1)], # account for 0-indexing 
     '.slice': lambda x, y, z: lambda c: x(c)[y(c):z(c)], 

@@ -237,6 +237,7 @@ test_examples = [
         denotation=1),
 ]
 
+
 spouse_examples = [
 #     explanations = [
 #     "Label false because the number of words between arg 1 and arg 2 is larger than 10",
@@ -288,11 +289,26 @@ spouse_examples = [
         denotation=-1),
 ]
 
+
+cdr_examples = [
+    Example(
+        explanation="Label false because arg 1 ends with 'induced'",
+        candidate=('blue-induced', 'coma'),
+        denotation=-1),
+    # Example(
+    #     explanation="Label false because any between arg 1 and arg 2 ends with '-induced'",
+    #     candidate=None,
+    #     denotation=-1),
+]
+
+
 def get_examples(which, candidates):
     if which=='test':
         examples = test_examples
     elif which=='spouse':
         examples = spouse_examples
+    elif which=='cdr':
+        examples = cdr_examples
     else:
         raise Exception("Invalid example set provided.")
     

@@ -36,10 +36,8 @@ class PunctuationAnnotator(Annotator):
     
     def annotate(self, tokens):
         if len(tokens) == 1:
-            if tokens[0]['pos'] == "``":
-                return [('$OpenQuote', tokens[0]['word'])]
-            elif tokens[0]['pos'] == "\'\'":
-                return [('$CloseQuote', tokens[0]['word'])]
+            if tokens[0]['pos'] in ["``", "\'\'"]:
+                return [('$Quote', tokens[0]['word'])]
             elif tokens[0]['pos'] == "-LRB-":
                 return [('$OpenParen', tokens[0]['word'])]
             elif tokens[0]['pos'] == "-RRB-":

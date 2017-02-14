@@ -2,15 +2,15 @@ from snorkel.models import Document, Sentence, candidate_subclass
 from snorkel.parser import CorpusParser, TSVDocPreprocessor, XMLMultiDocPreprocessor
 from snorkel.candidates import Ngrams, CandidateExtractor, PretaggedCandidateExtractor
 from snorkel.matchers import PersonMatcher
-from snorkel.annotations import FeatureAnnotator
+from snorkel.annotations import FeatureAnnotator, LabelAnnotator
 
+from utils import TaggerOneTagger
 from load_external_annotations import load_external_labels
+from cdr_lfs import get_cdr_lfs
 
 import os
 import csv
 import cPickle
-
-ChemicalDisease = candidate_subclass('ChemicalDisease', ['chemical', 'disease'])
 
 class SnorkelModel(object):
     def __init__(self, session, parallelism=1, seed=0, verbose=True):
@@ -19,15 +19,15 @@ class SnorkelModel(object):
         self.seed = seed
         self.verbose = verbose
 
-    def parse(self, doc_preprocessor, clear=True):
-        corpus_parser = CorpusParser()
+    def parse(self, doc_preprocessor, fn=None, clear=True):
+        corpus_parser = CorpusParser(fn=fn)
         corpus_parser.apply(doc_preprocessor, count=doc_preprocessor.max_docs, 
                             parallelism=self.parallelism, clear=clear)
 
     def extract(self, cand_extractor, sents, split=0, clear=True):
         cand_extractor.apply(sents, split=split, parallelism=self.parallelism, clear=clear)
 
-    def annotate(self):
+    def load_gold(self):
         raise NotImplementedError
 
     def featurize(self):
@@ -48,12 +48,14 @@ class CDRModel(SnorkelModel):
             id='.//id/text()',
             max_docs=max_docs
         )
-        SnorkelModel.parse(self, doc_preprocessor, clear=clear)
+        tagger_one = TaggerOneTagger()
+        fn=tagger_one.tag
+        SnorkelModel.parse(self, doc_preprocessor, fn=fn, clear=clear)
         if self.verbose:
             print("Documents: {}".format(self.session.query(Document).count()))
             print("Sentences: {}".format(self.session.query(Sentence).count()))
 
-    def extract(self, clear=True):
+    def extract(self, candidate_class, clear=True):
         with open('data/doc_ids.pkl', 'rb') as f:
             train_ids, dev_ids, test_ids = cPickle.load(f)
         train_ids, dev_ids, test_ids = set(train_ids), set(dev_ids), set(test_ids)
@@ -71,14 +73,37 @@ class CDRModel(SnorkelModel):
                 else:
                     raise Exception('ID <{0}> not found in any id set'.format(doc.name))
 
-        candidate_extractor = PretaggedCandidateExtractor(ChemicalDisease, ['Chemical', 'Disease'])
-        candidate_extractor.apply(train_sents, split=0)
-        print "Number of candidates:", self.session.query(ChemicalDisease).count()
-        # for k, sents in enumerate([train_sents, dev_sents, test_sents]):
-        #     SnorkelModel.extract(self, candidate_extractor, sents, split=k, clear=clear)
-        #     if self.verbose:
-        #         print("Candidates: {}".format(
-        #             self.session.query(ChemicalDisease).filter(ChemicalDisease.split == k).count()))
+        candidate_extractor = PretaggedCandidateExtractor(candidate_class, ['Chemical', 'Disease'])
+        for k, sents in enumerate([train_sents, dev_sents, test_sents]):
+            SnorkelModel.extract(self, candidate_extractor, sents, split=k, clear=clear)
+            if self.verbose:
+                print("Candidates: {}".format(
+                    self.session.query(candidate_class).filter(candidate_class.split == k).count()))
+
+    def load_gold(self, candidate_class):
+        for k in range(3):
+            load_external_labels(self.session, candidate_class, split=k, annotator='gold')
+
+    def featurize(self):
+        featurizer = FeatureAnnotator()
+        for k in range(3):
+            if k == 0:
+                F = featurizer.apply(split=k, parallelism=self.parallelism)
+            else:
+                F = featurizer.apply_existing(split=k, parallelism=self.parallelism)
+            nCandidates, nFeatures = F.shape
+            print("Featurized split {}: ({},{}) sparse matrix".format(k, nCandidates, nFeatures))
+
+    def label(self, lfs='python'):
+        if lfs == 'python':
+            LFs = get_cdr_lfs()
+        # else:
+        #   get it from the user (with candidates)
+        labeler = LabelAnnotator(f=LFs)
+        L_train = labeler.apply(split=0, parallelism=self.parallelism)
+        if self.verbose:
+            return L_train.lf_stats(self.session)
+
 
 class SpouseModel(SnorkelModel):
     def parse(self, file_path, max_docs=float('inf'), clear=True):
@@ -146,7 +171,7 @@ class SpouseModel(SnorkelModel):
                 nCandidates = self.session.query(Spouse).filter(Spouse.split == split).count()
                 print "Split {}: {} Candidates".format(split, nCandidates)
 
-    def annotate(self):
+    def load_gold(self):
         load_external_labels(self.session, Spouse, annotator_name='gold')
 
     def featurize(self):   

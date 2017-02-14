@@ -108,7 +108,7 @@ def LF_uncertain(c):
 
 def LF_induced_other(c):
     """
-    Label 
+    DONE: Label false if a word between the chemical and the disease ends with '-induced'
     """
     return rule_regex_search_tagged_text(c, '{{A}}.{20,1000}-induced {{B}}', -1)
 
@@ -174,20 +174,20 @@ def LF_weak_assertions(c):
     return -1 if re.search(WEAK_RGX, get_tagged_text(c), flags=re.I) else 0
 
 # COMPOSITES
-# def LF_ctd_marker_c_d(c):
-#     return LF_c_d(c) * cand_in_ctd_marker(c)
+def LF_ctd_marker_c_d(c):
+    return LF_c_d(c) * cand_in_ctd_marker(c)
 
-# def LF_ctd_marker_induce(c):
-#     return (LF_c_induced_d(c) or LF_d_induced_by_c_tight(c)) * cand_in_ctd_marker(c)
+def LF_ctd_marker_induce(c):
+    return (LF_c_induced_d(c) or LF_d_induced_by_c_tight(c)) * cand_in_ctd_marker(c)
 
-# def LF_ctd_therapy_treat(c):
-#     return LF_c_treat_d_wide(c) * cand_in_ctd_therapy(c)
+def LF_ctd_therapy_treat(c):
+    return LF_c_treat_d_wide(c) * cand_in_ctd_therapy(c)
 
-# def LF_ctd_unspecified_treat(c):
-#     return LF_c_treat_d_wide(c) * cand_in_ctd_unspecified(c)
+def LF_ctd_unspecified_treat(c):
+    return LF_c_treat_d_wide(c) * cand_in_ctd_unspecified(c)
 
-# def LF_ctd_unspecified_induce(c):
-#     return (LF_c_induced_d(c) or LF_d_induced_by_c_tight(c)) * cand_in_ctd_unspecified(c)
+def LF_ctd_unspecified_induce(c):
+    return (LF_c_induced_d(c) or LF_d_induced_by_c_tight(c)) * cand_in_ctd_unspecified(c)
 
 def LF_closer_chem(c):
     """
@@ -235,3 +235,40 @@ def LF_closer_dis(c):
         if et == 'Disease' and cid != sent.entity_cids[dis_start]:
             return -1
     return 0
+
+def get_cdr_lfs():
+    return [
+        LF_c_cause_d,
+        LF_c_d,
+        LF_c_induced_d,
+        LF_c_treat_d,
+        LF_c_treat_d_wide,
+        LF_closer_chem,
+        LF_closer_dis,
+        LF_ctd_marker_c_d,
+        LF_ctd_marker_induce,
+        LF_ctd_therapy_treat,
+        LF_ctd_unspecified_treat,
+        LF_ctd_unspecified_induce,
+        LF_d_following_c,
+        LF_d_induced_by_c,
+        LF_d_induced_by_c_tight,
+        LF_d_treat_c,
+        LF_develop_d_following_c,
+        LF_far_c_d,
+        LF_far_d_c,
+        LF_improve_before_disease,
+        LF_in_ctd_therapy,
+        LF_in_ctd_marker,
+        LF_in_patient_with,
+        LF_induce,
+        LF_induce_name,
+        LF_induced_other,
+        LF_level,
+        LF_measure,
+        LF_neg_d,
+        LF_risk_d,
+        LF_treat_d,
+        LF_uncertain,
+        LF_weak_assertions,
+    ]

@@ -95,7 +95,9 @@ compositional_rules = [
     Rule('$Bool', '$None $BoolList', sems_in_order),
 
     # Strings
-    Rule('$String', '$OpenQuote $Token $CloseQuote', lambda sems: ('.string', sems[1])),
+    Rule('$IncompleteString', '$Quote $Token', lambda sems: [sems[1]]),
+    Rule('$IncompleteString', '$IncompleteString $Token', lambda sems: sems[0] + [sems[1]]),
+    Rule('$String', '$IncompleteString $Quote', lambda sems: ('.string', ' '.join(sems[0]))),
     
     Rule('$Bool', '$String $StringToBool', lambda sems: tuple(list(sems[1]) + [sems[0]])),
     Rule('$BoolList', '$StringList $StringToBool', lambda sems: tuple(['.list'] + [tuple(list(sems[1]) + [x]) for x in sems[0][1:]])),

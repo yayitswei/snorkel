@@ -10,10 +10,13 @@ from util import CoreNLPHandler
 # Grammar ======================================================================
 
 class Grammar(object):
-    def __init__(self, rules=[], ops={}, annotators=[], user_lists={}, start_symbol='$ROOT'):
+    def __init__(self, rules=[], ops={}, candidate_class=None, annotators=[], 
+                 user_lists={}, absorb=True, start_symbol='$ROOT'):
         self.ops = ops
+        self.candidate_class = candidate_class
         self.annotators = annotators
         self.user_lists = user_lists
+        self.absorb = absorb
         self.categories = set()
         self.lexical_rules = defaultdict(list)
         self.unary_rules = defaultdict(list)
@@ -66,7 +69,8 @@ class Grammar(object):
             self.add_rule_containing_optional(rule)
         elif rule.is_lexical():
             self.lexical_rules[rule.rhs].append(rule)
-            self.add_absorption_rule(rule)
+            if self.absorb:
+                self.add_absorption_rule(rule)
         elif rule.is_unary():
             self.unary_rules[rule.rhs].append(rule)
         elif rule.is_binary():

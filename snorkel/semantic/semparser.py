@@ -5,12 +5,14 @@ from annotator import *
 from pandas import DataFrame, Series
 
 class SemanticParser():
-    def __init__(self, user_lists={}):
+    def __init__(self, candidate_class, user_lists={}, absorb=True):
         annotators = [TokenAnnotator(), PunctuationAnnotator(), IntegerAnnotator()]
         self.grammar = Grammar(rules=snorkel_rules, 
                                ops=snorkel_ops, 
+                               candidate_class=candidate_class,
                                user_lists=user_lists,
-                               annotators=annotators)
+                               annotators=annotators,
+                               absorb=absorb)
 
     def parse(self, explanations, candidates=None, verbose=False, return_parses=False):
         """
@@ -69,9 +71,9 @@ class SemanticParser():
                         if example.candidate is None:
                             nUnknown += 1
                         else:
+                            if debug:
+                                print parse.semantics
                             if parse.function(example.candidate)==example.denotation:
-                                if debug:
-                                    print parse.semantics
                                 nCorrect += 1
                             else:
                                 nIncorrect += 1

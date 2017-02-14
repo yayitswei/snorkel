@@ -27,7 +27,7 @@ def cand_in_ctd_marker(c):
 
 def LF_in_ctd_unspecified(c):
     """
-    Label false if the canonical ids are in ctd_unspecified
+    Label false if the pair of canonical ids of the chemical and disease are in ctd_unspecified
     """
     return -1 * cand_in_ctd_unspecified(c)
 
@@ -93,6 +93,9 @@ def LF_c_induced_d(c):
         ) else 0
 
 def LF_improve_before_disease(c):
+    """
+    Label false if a word before the chemical starts with 'improv'
+    """
     return rule_regex_search_before_B(c, 'improv.*', -1)
 
 pat_terms = ['in a patient with', 'in patients with']

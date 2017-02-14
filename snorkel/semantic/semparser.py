@@ -39,7 +39,7 @@ class SemanticParser():
                 print("{} LFs created from {} explanations".format(len(LFs), len(explanations)))
             return LFs
 
-    def evaluate(self, examples, debug=False):
+    def evaluate(self, examples, show_explanation=False, show_correct=False, show_incorrect=False):
         """Returns a pandas DataFrame with the explanations and various per-explanation stats"""
         examples = examples if isinstance(examples, list) else [examples]
         col_names = ['Correct', 'Incorrect', 'Redundant', 'Failed', 'Unknown']
@@ -51,10 +51,9 @@ class SemanticParser():
         redundant = []
         failed = []
         unknown = []
-        # accuracy = []
         
         for i, example in enumerate(examples):
-            if debug: print("Example {}: {}".format(i, example.explanation))
+            if show_explanation: print("Example {}: {}".format(i, example.explanation))
             nCorrect = nIncorrect = nRedundant = nFailed = nUnknown = 0
             semantics = set()
             parses = self.parse(
@@ -71,11 +70,11 @@ class SemanticParser():
                         if example.candidate is None:
                             nUnknown += 1
                         else:
-                            if debug:
-                                print parse.semantics
                             if parse.function(example.candidate)==example.denotation:
+                                if show_correct: print(parse.semantics)
                                 nCorrect += 1
                             else:
+                                if show_incorrect: print(parse.semantics)
                                 nIncorrect += 1
                 except:
                     nFailed += 1
@@ -85,12 +84,6 @@ class SemanticParser():
             redundant.append(nRedundant)
             failed.append(nFailed)
             unknown.append(nUnknown)
-            # if nCorrect == 0:
-            #     accuracy.append(0.00)
-            # elif nCorrect==1:
-            #     accuracy.append(1.00)
-            # else:
-            #     accuracy.append(1.0/(nCorrect-1))
 
         d['Correct'] = Series(data=correct, index=example_names)
         d['Incorrect'] = Series(data=incorrect, index=example_names)

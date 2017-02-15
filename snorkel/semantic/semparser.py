@@ -45,7 +45,8 @@ class SemanticParser():
                 show_incorrect=False,
                 show_redundant=False,
                 show_failed=False,
-                show_all=False):
+                show_all=False,
+                only=[]):
         """Returns a pandas DataFrame with the explanations and various per-explanation stats"""
         if show_all:
             show_correct = show_incorrect = show_redundant = show_failed = True
@@ -61,6 +62,8 @@ class SemanticParser():
         unknown = []
         
         for i, example in enumerate(examples):
+            if only and i not in only:
+                continue
             if show_explanation: print("Example {}: {}".format(i, example.explanation))
             nCorrect = nIncorrect = nRedundant = nFailed = nUnknown = 0
             semantics = set()

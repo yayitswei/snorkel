@@ -34,7 +34,7 @@ lexical_rules = [
     Rule('$NumberPOS', 'number', ('.string', 'CD')),
     # other
     Rule('$In', 'in', '.in'),
-    Rule('$Contains', 'contains', '.in'),
+    Rule('$Contains', 'contains', '.contains'),
     Rule('$StartsWith', 'starts with', '.startswith'),
     Rule('$EndsWith', 'ends with', '.endswith'),
     Rule('$Label', 'label ?it', '.label'),
@@ -80,6 +80,7 @@ unary_rules = [
     Rule('$POS', '$NounPOS', sems0),
     Rule('$POS', '$NumberPOS', sems0),
     Rule('$StringList', '$UserList', sems0),
+    # Rule('$Int', '$BoolList', lambda sems: ('.sum', sems[0])),
     Rule('$List', '$StringList', sems0),
     Rule('$List', '$IntList', sems0),
     # ArgX may be treated as an object or a string (referring to its textual contents)
@@ -98,13 +99,21 @@ compositional_rules = [
     Rule('$Bool', '$None $BoolList', sems_in_order),
 
     # Strings
+        # building strings
     Rule('$StringStub', '$Quote $Token', lambda sems: [sems[1]]),
     Rule('$StringStub', '$StringStub $Token', lambda sems: sems[0] + [sems[1]]),
     Rule('$String', '$StringStub $Quote', lambda sems: ('.string', ' '.join(sems[0]))),
     
+        # building string lists
+    Rule('$StringListStub', '?$ListWord $OpenParen $String', lambda sems: ('.list', sems[2])),
+    Rule('$StringListStub', '$StringListStub ?$Separator ?$And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
+    Rule('$StringList', '$StringListStub $CloseParen', sems0),
+
+        # applying $StringToBool functions
     Rule('$Bool', '$String $StringToBool', lambda sems: ('.call', sems[1], sems[0])),
-    Rule('$BoolList', '$StringList $StringToBool', lambda sems: tuple(['.list'] + [tuple(list(sems[1]) + [x]) for x in sems[0][1:]])),
+    Rule('$BoolList', '$StringList $StringToBool', lambda sems: ('.map', sems[1], sems[0])),
     
+        # defining #StringToBool functions
     Rule('$StringToBool', '$Lower', lambda sems: (sems[0],)),
     Rule('$StringToBool', '$Upper', lambda sems: (sems[0],)),
     Rule('$StringToBool', '$Capital', lambda sems: (sems[0],)),
@@ -112,48 +121,47 @@ compositional_rules = [
     Rule('$StringToBool', '$EndsWith $String', sems_in_order),
     Rule('$StringToBool', '$In $String', sems_in_order),
     Rule('$StringToBool', '$In $StringList', sems_in_order),
-    Rule('$StringToBool', '$Contains $String', lambda sems: ('.contains', sems[1])),
+    Rule('$StringToBool', '$Contains $String', sems_in_order),
     Rule('$StringToBool', '$Equals $String', sems_in_order),
     
-    Rule('$StringListStub', '?$ListWord $OpenParen $String', lambda sems: ('.list', sems[2])),
-    Rule('$StringListStub', '$StringListStub ?$Separator ?$And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
-    Rule('$StringList', '$StringListStub $CloseParen', sems0),
-    
     # Integers
-    Rule('$BoolList', '$IntList $IntToBool', lambda sems: tuple(['.list'] + [tuple(list(sems[1]) + [x]) for x in sems[0][1:]])),
-    Rule('$Bool', '$Int $IntToBool', lambda sems: tuple(list(sems[1]) + [sems[0]])),
-    Rule('$Bool', '$Compare $Int $BoolList', lambda sems: (sems[0], sems[1], ('.sum', sems[2]))), # e.g., more than five of X words are upper
+        # applying $IntoToBool functions
+    Rule('$Bool', '$Int $IntToBool', lambda sems: ('.call', sems[1], sems[0])),
+    Rule('$BoolList', '$IntList $IntToBool', lambda sems: ('.map', sems[1], sems[0])),
+    
+    Rule('$Bool', '$Compare $Int $BoolList', lambda sems: ('.call', (sems[0], sems[1]), ('.sum', sems[2]))), # e.g., more than five of X words are upper
 
     Rule('$IntToBool', '$In $IntList', sems_in_order),
-    Rule('$IntToBool', '$Contains $Int', lambda sems: ('.contains', sems[1])),
+    Rule('$IntToBool', '$Contains $Int', sems_in_order),
     Rule('$IntToBool', '$Compare $Int', sems_in_order),
 
-    Rule('$Int', '$Count ?$In $List', lambda sems: (sems[0], sems[2])),
+    # Rule('$Int', '$Count ?$In $List', lambda sems: (sems[0], sems[2])),
     
     # Slices
     #TODO: Test these more thoroughly
-    Rule('$String', '$Int $StringList', lambda sems: ('.index', sems[1], sems[0])),
-    Rule('$StringList', '$LessThan $Int $StringList', lambda sems: ('.slice', sems[2], ('.int', 0), sems[1])),
-    Rule('$StringList', '$AtMost $Int $StringList', lambda sems: ('.slice', sems[2], ('.int', 0), ('.int', sems[1][1] + 1))),
-    Rule('$StringList', '$AtLeast $Int $StringList', lambda sems: ('.slice', sems[2], sems[1], 100)),
-    Rule('$StringList', '$MoreThan $Int $StringList', lambda sems: ('.slice', sems[2], ('.int', sems[1][1] + 1), 100)),
-    Rule('$Int', '$Int $IntList', lambda sems: ('.index', sems[1], sems[0])),
+    # Rule('$String', '$Int $StringList', lambda sems: ('.index', sems[1], sems[0])),
+    # Rule('$StringList', '$LessThan $Int $StringList', lambda sems: ('.slice', sems[2], ('.int', 0), sems[1])),
+    # Rule('$StringList', '$AtMost $Int $StringList', lambda sems: ('.slice', sems[2], ('.int', 0), ('.int', sems[1][1] + 1))),
+    # Rule('$StringList', '$AtLeast $Int $StringList', lambda sems: ('.slice', sems[2], sems[1], 100)),
+    # Rule('$StringList', '$MoreThan $Int $StringList', lambda sems: ('.slice', sems[2], ('.int', sems[1][1] + 1), 100)),
+    # Rule('$Int', '$Int $IntList', lambda sems: ('.index', sems[1], sems[0])),
 
     # Context
     # Note: Normal 'X in Y' does not work because we need to know what they are looking for (e.g., words, pos, ner)
     Rule('$StringList', '$Direction $ArgX', lambda sems: (sems[0], sems[1], ('.string', 'words'))),
     Rule('$StringList', '$Direction $ArgX $Or $ArgX', lambda sems: ('.merge', (sems[0], sems[1], ('.string', 'words')), (sems[0], sems[3], ('.string', 'words')))),
-    Rule('$Bool', '$POS ?$In $Direction $ArgX', lambda sems: ('.in', (sems[2], sems[3], ('.string', 'pos_tags')), sems[0])),
-    Rule('$Bool', '$NER ?$In $Direction $ArgX', lambda sems: ('.in', (sems[2], sems[3], ('.string', 'ner_tags')), sems[0])),
+    Rule('$StringToBool', '$Direction $ArgX', lambda sems: ('.in', (sems[0], sems[1], ('.string', 'words')))),
+    # Rule('$Bool', '$POS ?$In $Direction $ArgX', lambda sems: ('.in', (sems[2], sems[3], ('.string', 'pos_tags')), sems[0])),
+    # Rule('$Bool', '$NER ?$In $Direction $ArgX', lambda sems: ('.in', (sems[2], sems[3], ('.string', 'ner_tags')), sems[0])),
     
     Rule('$StringList', '$BetweenTokens $ArgX $And $ArgX', lambda sems: (sems[0], sems[1], sems[3], ('.string', 'words'))),
     Rule('$StringToBool', '$BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[0], sems[1], sems[3], ('.string', 'words')))),
-    Rule('$Bool', '$POS ?$In $BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'pos_tags')), sems[0])),
-    Rule('$Bool', '$NER ?$In $BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'ner_tags')), sems[0])),
+    # Rule('$Bool', '$POS ?$In $BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'pos_tags')), sems[0])),
+    # Rule('$Bool', '$NER ?$In $BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'ner_tags')), sems[0])),
     
     Rule('$StringList', '$SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: (sems[0], ('.string', 'words'))),
-    Rule('$Bool', '$POS ?$In $SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'pos_tags')), sems[0])),
-    Rule('$Bool', '$NER ?$In $SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'ner_tags')), sems[0])),
+    # Rule('$Bool', '$POS ?$In $SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'pos_tags')), sems[0])),
+    # Rule('$Bool', '$NER ?$In $SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'ner_tags')), sems[0])),
     
     Rule('$ArgX', '$Arg $Int', sems_in_order),
 ]
@@ -171,6 +179,7 @@ snorkel_ops = {
     '.list': lambda *x: lambda c: [z(c) for z in x],
     '.user_list': lambda x: lambda c: c['user_lists'][x(c)],
     '.call': lambda *x: lambda c: x[0](c) if len(x)==1 else x[0](c)(x[1](c)), # TODO: generalize to more inputs?
+    '.map': lambda x, y: lambda c: [x(c)(yi) for yi in y(c)],
     # logic
     '.and': lambda x, y: lambda c: x(c) and y(c),
     '.or': lambda x, y: lambda c: x(c) or y(c),
@@ -179,11 +188,11 @@ snorkel_ops = {
     '.any': lambda x: lambda c: any(x(c)),
     '.none': lambda x: lambda c: not any(x(c)),
     # comparisons
-    '.equals': lambda x, y: lambda c: y(c) == x(c),
-    '.less': lambda x, y: lambda c: y(c) < x(c),
-    '.atmost': lambda x, y: lambda c: y(c) <= x(c),
-    '.more': lambda x, y: lambda c: y(c) > x(c),
-    '.atleast': lambda x, y: lambda c: y(c) >= x(c),
+    '.equals': lambda x: lambda c: lambda y: y == x(c),
+    '.less': lambda x: lambda c: lambda y: y < x(c),
+    '.atmost': lambda x: lambda c: lambda y: y <= x(c),
+    '.more': lambda x: lambda c: lambda y: y > x(c),
+    '.atleast': lambda x: lambda c: lambda y: y >= x(c),
     # string functions
     '.upper': lambda c: lambda x: x.isupper(),
     '.lower': lambda c: lambda x: x.islower(),
@@ -191,10 +200,10 @@ snorkel_ops = {
     '.startswith': lambda x: lambda c: lambda y: y.startswith(x(c)),
     '.endswith': lambda x: lambda c: lambda y: y.endswith(x(c)),
     # lists
+    '.in': lambda x: lambda c: lambda y: y in x(c),
+    '.contains': lambda x: lambda c: lambda y: x(c) in y,
     '.index': lambda x, y: lambda c: x(c)[max(0, y(c) - 1)], # account for 0-indexing 
     '.slice': lambda x, y, z: lambda c: x(c)[y(c):z(c)], 
-    '.in': lambda x, y: lambda c: y(c) in x(c),
-    '.contains': lambda x, y: lambda c: x(c) in y(c),
     '.count': lambda x: lambda c: len(x(c)),
     '.sum': lambda x: lambda c: sum(x(c)),
     '.merge': lambda x, y: lambda c: x(c) + y(c),

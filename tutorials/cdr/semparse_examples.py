@@ -77,17 +77,17 @@ test_examples = [
         denotation=1),
     # Lowercase
     Example(
-        explanation="label True because the word arg 1 is lowercase",
+        explanation="label True because arg 1 is lowercase",
         candidate=('foo', 'bar'),
         denotation=1),
     # Uppercase
     Example(
-        explanation="label True because the word arg 1 is upper case",
+        explanation="label True because arg 1 is upper case",
         candidate=('FOO', 'bar'),
         denotation=1),
     # Capitalized
     Example(
-        explanation="label True because the arg 1 is capitalized",
+        explanation="label True because arg 1 is capitalized",
         candidate=('Foo', 'bar'),
         denotation=1),
     # Starts with
@@ -120,9 +120,19 @@ test_examples = [
         explanation="label True because 'bar' is in the list ('foo','bar','baz')",
         candidate=('foo', 'bar'),
         denotation=1),
+    # UserList
+    Example(
+        explanation="label True because 'blue' in colors",
+        candidate=('foo', 'bar'),
+        denotation=1),
     # Left words
     Example(
         explanation="label True because 'wife' is in the words left of arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),    
+    # Left words (paraphrase)
+    Example(
+        explanation="label True because 'wife' to the left of arg 2",
         candidate=-7563346943193853808,
         denotation=1),    
     # Right words
@@ -135,51 +145,51 @@ test_examples = [
         explanation="label True because 'wife' is between arg 1 and arg 2",
         candidate=-7563346943193853808,
         denotation=1),    
-    # NER tags
-    Example(
-        explanation="label True because a person is to the left of arg 2",
-        candidate=-7563346943193853808,
-        denotation=1),
-    # POS tags
-    Example(
-        explanation="label True because a noun is between arg 1 and arg 2",
-        candidate=-7563346943193853808,
-        denotation=1),
+    # # NER tags
+    # Example(
+    #     explanation="label True because a person is to the left of arg 2",
+    #     candidate=-7563346943193853808,
+    #     denotation=1),
+    # # POS tags
+    # Example(
+    #     explanation="label True because a noun is between arg 1 and arg 2",
+    #     candidate=-7563346943193853808,
+    #     denotation=1),
     # Count
     Example(
         explanation="label True because the number of words between arg 1 and arg 2 is less than 20",
         candidate=-7563346943193853808,
         denotation=1),
     # Index
-    Example(
-        explanation="label True because the first word to the left of arg 2 equals 'wife'",
-        candidate=-7563346943193853808,
-        denotation=1),
-    # Slice0
-    Example(
-        explanation="label True because 'wife' is within two words to the left of arg 2",
-        candidate=-7563346943193853808,
-        denotation=1),
-    # # Slice1
     # Example(
-    #     explanation="label True because 'part' is within two words to the right of arg 2",
+    #     explanation="label True because the first word to the left of arg 2 equals 'wife'",
     #     candidate=-7563346943193853808,
     #     denotation=1),
-    # # Slice2
-    # Example(
-    #     explanation="label True because 'lawyer' is within two words of arg 1",
-    #     candidate=-7563346943193853808,
-    #     denotation=1),
-    # # Slice3
-    # Example(
-    #     explanation="label True because the 'lawyer' is more than two words away from arg 2",
-    #     candidate=-7563346943193853808,
-    #     denotation=1),
-    # Merge
-    Example(
-        explanation="label True because 'wife' is to the left of arg 1 or arg 2",
-        candidate=-7563346943193853808,
-        denotation=1),
+    # # # Slice0
+    # # Example(
+    # #     explanation="label True because 'wife' is within two words to the left of arg 2",
+    # #     candidate=-7563346943193853808,
+    # #     denotation=1),
+    # # # Slice1
+    # # Example(
+    # #     explanation="label True because 'part' is within two words to the right of arg 2",
+    # #     candidate=-7563346943193853808,
+    # #     denotation=1),
+    # # # Slice2
+    # # Example(
+    # #     explanation="label True because 'lawyer' is within two words of arg 1",
+    # #     candidate=-7563346943193853808,
+    # #     denotation=1),
+    # # # Slice3
+    # # Example(
+    # #     explanation="label True because the 'lawyer' is more than two words away from arg 2",
+    # #     candidate=-7563346943193853808,
+    # #     denotation=1),
+    # # # Merge
+    # # Example(
+    # #     explanation="label True because 'wife' is to the left of arg 1 or arg 2",
+    # #     candidate=-7563346943193853808,
+    # #     denotation=1),
     # Intersection0
     Example(
         explanation="label True because there is at least one word from colors in the bluebird words",
@@ -187,9 +197,9 @@ test_examples = [
         denotation=1),
     # Intersection1
     Example(
-        explanation="label False because less than two colors words are in bluebird",
+        explanation="label True because less than two colors words are in bluebird",
         candidate=('foo', 'bar'),
-        denotation=-1),
+        denotation=1),
     # Disjoint
     Example(
         explanation="label True because there are no colors words in the greek words",
@@ -231,10 +241,10 @@ test_examples = [
         candidate=-7563346943193853808,
         denotation=1),
     # Composition3
-    Example(
-        explanation="label True because there is at least one spouse word within two words to the left of arg 1 or arg 2",
-        candidate=-7563346943193853808,
-        denotation=1),
+    # Example(
+    #     explanation="label True because there is at least one spouse word within two words to the left of arg 1 or arg 2",
+    #     candidate=-7563346943193853808,
+    #     denotation=1),
 ]
 
 

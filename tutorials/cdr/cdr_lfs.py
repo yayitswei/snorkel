@@ -57,7 +57,7 @@ def get_cdr_lfs():
     causal_past = ['induced', 'caused', 'due']
     def LF_d_induced_by_c(c):
         """
-        TBD
+        Label True because 'induced' or 'caused' or 'due' and 'by' or 'to' is between the disease and the chemical.
         """
         return rule_regex_search_btw_BA(c, '.{0,50}' + ltp(causal_past) + '.{0,9}(by|to).{0,50}', 1)
 

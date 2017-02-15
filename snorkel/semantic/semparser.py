@@ -93,6 +93,10 @@ class SemanticParser():
                     print parse.function(example.candidate)
                     import pdb; pdb.set_trace()
                     nFailed += 1
+            if nCorrect == 0:
+                print("WARNING: No parses found for the following explanation:"
+                print(parse.explanation)
+
             example_names.append('Example{}'.format(i))
             correct.append(nCorrect)
             incorrect.append(nIncorrect)

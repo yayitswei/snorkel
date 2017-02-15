@@ -75,7 +75,7 @@ class SemanticParser():
             for parse in parses:
                 try:
                     if parse.semantics in semantics:
-                        if show_redundant: print(parse.semantics)
+                        if show_redundant: print("R: {}".format(parse.semantics))
                         nRedundant += 1
                     else:
                         semantics.add(parse.semantics)
@@ -83,18 +83,18 @@ class SemanticParser():
                             nUnknown += 1
                         else:
                             if parse.function(example.candidate)==example.denotation:
-                                if show_correct: print(parse.semantics)
+                                if show_correct: print("C: {}".format(parse.semantics))
                                 nCorrect += 1
                             else:
-                                if show_incorrect: print(parse.semantics)
+                                if show_incorrect: print("I: {}".format(parse.semantics))
                                 nIncorrect += 1
                 except:
-                    if show_failed: print(parse.semantics)
+                    if show_failed: print("F: {}".format(parse.semantics))
                     print parse.function(example.candidate)
                     import pdb; pdb.set_trace()
                     nFailed += 1
             if nCorrect == 0:
-                print("WARNING: No parses found for the following explanation:"
+                print("WARNING: No parses found for the following explanation:")
                 print(parse.explanation)
 
             example_names.append('Example{}'.format(i))

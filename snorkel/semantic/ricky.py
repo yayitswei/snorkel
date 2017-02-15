@@ -56,7 +56,7 @@ lexical_rules.extend(
     [Rule('$AtMost', w, '.atmost') for w in ['at most', 'no larger than', 'less than or equal', 'within', '<=']] +
     [Rule('$MoreThan', w, '.more') for w in ['more than', 'greater than', 'larger than', '>']] + 
     [Rule('$AtLeast', w, '.atleast') for w in ['at least', 'no less than', 'no smaller than', 'greater than or equal', '>=']] +
-    [Rule('$ListWord', w) for w in ['list', 'set', 'group']] + 
+    # [Rule('$ListWord', w) for w in ['list', 'set', 'group']] + 
     [Rule('$Separator', w) for w in [',', ';', '/']] +
     [Rule('$Count', w, '.count') for w in ['number', 'length', 'count']] +
     [Rule('$NER', w, ('.string', w.upper())) for w in ['person', 'location', 'organization']] + 
@@ -104,15 +104,23 @@ compositional_rules = [
     Rule('$StringStub', '$StringStub $Token', lambda sems: sems[0] + [sems[1]]),
     Rule('$String', '$StringStub $Quote', lambda sems: ('.string', ' '.join(sems[0]))),
     
-        # building string lists
-    Rule('$StringListStub', '?$ListWord $OpenParen $String', lambda sems: ('.list', sems[2])),
-    Rule('$StringListStub', '$StringListStub ?$Separator ?$And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
-    Rule('$StringList', '$StringListStub $CloseParen', sems0),
+        # building explicit string lists
+    # Rule('$StringListStub', '?$OpenParen $String', lambda sems: ('.list', sems[1])),
+    # Rule('$StringListStub', '$StringListStub ?$Separator ?$And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
+    # Rule('$StringList', '$StringListStub ?$CloseParen', sems0),
+
+        # building implicit string lists
+    # Rule('$StringList', '$String', lambda sems: ('.list', sems[0])),
+    Rule('$StringList', '$StringList $String', lambda sems: tuple(list(sems[0]) + list(sems[1]))),
+    Rule('$StringListOr', '$StringList ?$Separator $Or $String', lambda sems: tuple(list(sems[0]) + list(sems[3]))),
+    Rule('$StringListAnd', '$StringList ?$Separator $And $String', lambda sems: tuple(list(sems[0]) + list(sems[3]))),
 
         # applying $StringToBool functions
     Rule('$Bool', '$String $StringToBool', lambda sems: ('.call', sems[1], sems[0])),
+    Rule('$Bool', '$StringListOr $StringToBool', lambda sems: ('.or', ('.map', sems[1], sems[0]))),
+    Rule('$Bool', '$StringListAnd $StringToBool', lambda sems: ('.and', ('.map', sems[1], sems[0]))),
     Rule('$BoolList', '$StringList $StringToBool', lambda sems: ('.map', sems[1], sems[0])),
-    
+
         # defining #StringToBool functions
     Rule('$StringToBool', '$Lower', lambda sems: (sems[0],)),
     Rule('$StringToBool', '$Upper', lambda sems: (sems[0],)),
@@ -181,8 +189,8 @@ snorkel_ops = {
     '.call': lambda *x: lambda c: x[0](c) if len(x)==1 else x[0](c)(x[1](c)), # TODO: generalize to more inputs?
     '.map': lambda x, y: lambda c: [x(c)(yi) for yi in y(c)],
     # logic
-    '.and': lambda x, y: lambda c: x(c) and y(c),
-    '.or': lambda x, y: lambda c: x(c) or y(c),
+    '.and': lambda *x: lambda c: all(xi(c) for xi in x),
+    '.or': lambda *x: lambda c: any(xi(c) for xi in x),
     '.not': lambda x: lambda c: not x(c),
     '.all': lambda x: lambda c: all(x(c)),
     '.any': lambda x: lambda c: any(x(c)),

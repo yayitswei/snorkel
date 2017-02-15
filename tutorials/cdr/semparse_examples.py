@@ -125,6 +125,16 @@ test_examples = [
         explanation="label True because 'blue' in colors",
         candidate=('foo', 'bar'),
         denotation=1),
+   # OrList
+    Example(
+        explanation="label True because 'blue' or 'shmoo' is in colors",
+        candidate=('foo', 'bar'),
+        denotation=1),
+    # AndList
+    Example(
+        explanation="label True because 'blue' and 'red' are in colors",
+        candidate=('foo', 'bar'),
+        denotation=1),
     # Left words
     Example(
         explanation="label True because 'wife' is in the words left of arg 2",
@@ -185,11 +195,11 @@ test_examples = [
     # #     explanation="label True because the 'lawyer' is more than two words away from arg 2",
     # #     candidate=-7563346943193853808,
     # #     denotation=1),
-    # # # Merge
-    # # Example(
-    # #     explanation="label True because 'wife' is to the left of arg 1 or arg 2",
-    # #     candidate=-7563346943193853808,
-    # #     denotation=1),
+    # Merge
+    Example(
+        explanation="label True because 'wife' is to the left of arg 1 or arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),
     # Intersection0
     Example(
         explanation="label True because there is at least one word from colors in the bluebird words",
@@ -226,10 +236,10 @@ test_examples = [
         candidate=-7563346943193853808,
         denotation=1),
     # Composition0
-    Example(
-        explanation="label True because 'wife' is between arg 1 and arg 2 and 'years' is to the left of arg 1",
-        candidate=-7563346943193853808,
-        denotation=1),
+    # Example(
+    #     explanation="label True because 'wife' is between arg 1 and arg 2 and 'years' is to the left of arg 1",
+    #     candidate=-7563346943193853808,
+    #     denotation=1),
     # Composition1
     Example(
         explanation="label True because arg 1 is identical to arg 2",

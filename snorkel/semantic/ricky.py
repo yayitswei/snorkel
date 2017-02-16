@@ -59,6 +59,7 @@ lexical_rules.extend(
     # [Rule('$ListWord', w) for w in ['list', 'set', 'group']] + 
     [Rule('$Separator', w) for w in [',', ';', '/']] +
     [Rule('$Count', w, '.count') for w in ['number', 'length', 'count']] +
+    [Rule('$Word', w) for w in ['word', 'words', 'term']] + 
     [Rule('$NER', w, ('.string', w.upper())) for w in ['person', 'location', 'organization']] + 
     [Rule('$Punctuation', w) for w in ['.', ',', ';', '!', '?']]
     )
@@ -80,11 +81,18 @@ unary_rules = [
     Rule('$POS', '$NounPOS', sems0),
     Rule('$POS', '$NumberPOS', sems0),
     Rule('$StringList', '$UserList', sems0),
-    # Rule('$Int', '$BoolList', lambda sems: ('.sum', sems[0])),
-    Rule('$List', '$StringList', sems0),
-    Rule('$List', '$IntList', sems0),
+    Rule('$UnaryStringToBool', '$Lower', sems0),
+    Rule('$UnaryStringToBool', '$Upper', sems0),
+    Rule('$UnaryStringToBool', '$Capital', sems0),
+    Rule('$BinaryStringToBool', '$StartsWith', sems0),
+    Rule('$BinaryStringToBool', '$EndsWith', sems0),
+    Rule('$BinaryStringToBool', '$In', sems0),
+    Rule('$BinaryStringToBool', '$Contains', sems0),
+    Rule('$BinaryStringToBool', '$Equals', sems0),
     # ArgX may be treated as an object or a string (referring to its textual contents)
     Rule('$String', '$ArgX', lambda sems: ('.arg_to_string', sems[0])),
+    Rule('$StringList', 'StringListOr', sems0),
+    Rule('$StringList', 'StringListAnd', sems0),
     Rule('$ROOT', '$LF', lambda sems: ('.root', sems[0])),
 ]
 
@@ -110,10 +118,10 @@ compositional_rules = [
     # Rule('$StringList', '$StringListStub ?$CloseParen', sems0),
 
         # building implicit string lists
-    # Rule('$StringList', '$String', lambda sems: ('.list', sems[0])),
-    Rule('$StringList', '$StringList $String', lambda sems: tuple(list(sems[0]) + list(sems[1]))),
-    Rule('$StringListOr', '$StringList ?$Separator $Or $String', lambda sems: tuple(list(sems[0]) + list(sems[3]))),
-    Rule('$StringListAnd', '$StringList ?$Separator $And $String', lambda sems: tuple(list(sems[0]) + list(sems[3]))),
+    Rule('$StringList', '$String', lambda sems: ('.list', sems[0])),
+    Rule('$StringList', '$StringList ?$Separator $String', lambda sems: tuple((list(sems[0]) + [sems[2]]))),
+    Rule('$StringListOr', '$StringList ?$Separator $Or $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
+    Rule('$StringListAnd', '$StringList ?$Separator $And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
 
         # applying $StringToBool functions
     Rule('$Bool', '$String $StringToBool', lambda sems: ('.call', sems[1], sems[0])),
@@ -122,22 +130,20 @@ compositional_rules = [
     Rule('$BoolList', '$StringList $StringToBool', lambda sems: ('.map', sems[1], sems[0])),
 
         # defining #StringToBool functions
-    Rule('$StringToBool', '$Lower', lambda sems: (sems[0],)),
-    Rule('$StringToBool', '$Upper', lambda sems: (sems[0],)),
-    Rule('$StringToBool', '$Capital', lambda sems: (sems[0],)),
-    Rule('$StringToBool', '$StartsWith $String', sems_in_order),
-    Rule('$StringToBool', '$EndsWith $String', sems_in_order),
-    Rule('$StringToBool', '$In $String', sems_in_order),
-    Rule('$StringToBool', '$In $StringList', sems_in_order),
-    Rule('$StringToBool', '$Contains $String', sems_in_order),
-    Rule('$StringToBool', '$Equals $String', sems_in_order),
+    Rule('$StringToBool', '$UnaryStringToBool', lambda sems: (sems[0],)),
+    Rule('$StringToBool', '$BinaryStringToBool $String', lambda sems: (sems[0], sems[1])),
+    # Rule('$StringToBool', '$BinaryStringToBool $StringListAnd', lambda sems: ('.composite_and', (sems[0], sems[1]))),
+    Rule('$StringToBool', '$BinaryStringToBool $StringListOr', lambda sems: ('.composite_or', (sems[0],), sems[1])),
+    
+    Rule('$StringToBool', '$In $StringList', sems_in_order), # TODO: unify me with the rest of the stringlisting going on
     
     # Integers
         # applying $IntoToBool functions
     Rule('$Bool', '$Int $IntToBool', lambda sems: ('.call', sems[1], sems[0])),
     Rule('$BoolList', '$IntList $IntToBool', lambda sems: ('.map', sems[1], sems[0])),
     
-    Rule('$Bool', '$Compare $Int $BoolList', lambda sems: ('.call', (sems[0], sems[1]), ('.sum', sems[2]))), # e.g., more than five of X words are upper
+    # e.g., more than five of X words are upper
+    Rule('$Bool', '$Compare $Int $BoolList', lambda sems: ('.call', (sems[0], sems[1]), ('.sum', sems[2]))),
 
     Rule('$IntToBool', '$In $IntList', sems_in_order),
     Rule('$IntToBool', '$Contains $Int', sems_in_order),
@@ -156,22 +162,31 @@ compositional_rules = [
 
     # Context
     # Note: Normal 'X in Y' does not work because we need to know what they are looking for (e.g., words, pos, ner)
-    Rule('$StringList', '$Direction $ArgX', lambda sems: (sems[0], sems[1], ('.string', 'words'))),
-    Rule('$StringList', '$Direction $ArgX $Or $ArgX', lambda sems: ('.merge', (sems[0], sems[1], ('.string', 'words')), (sems[0], sems[3], ('.string', 'words')))),
-    Rule('$StringToBool', '$Direction $ArgX', lambda sems: ('.in', (sems[0], sems[1], ('.string', 'words')))),
+    # Rule('$StringList', '$Direction $ArgX', lambda sems: (sems[0], sems[1], ('.string', 'words'))),
+    # Rule('$StringList', '$Direction $ArgX $Or $ArgX', lambda sems: ('.merge', (sems[0], sems[1], ('.string', 'words')), (sems[0], sems[3], ('.string', 'words')))),
+    # Rule('$StringToBool', '$Direction $ArgX', lambda sems: ('.in', (sems[0], sems[1], ('.string', 'words')))),
+    
     # Rule('$Bool', '$POS ?$In $Direction $ArgX', lambda sems: ('.in', (sems[2], sems[3], ('.string', 'pos_tags')), sems[0])),
     # Rule('$Bool', '$NER ?$In $Direction $ArgX', lambda sems: ('.in', (sems[2], sems[3], ('.string', 'ner_tags')), sems[0])),
     
-    Rule('$StringList', '$BetweenTokens $ArgX $And $ArgX', lambda sems: (sems[0], sems[1], sems[3], ('.string', 'words'))),
-    Rule('$StringToBool', '$BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[0], sems[1], sems[3], ('.string', 'words')))),
+    # Rule('$StringList', '$BetweenTokens $ArgX $And $ArgX', lambda sems: (sems[0], sems[1], sems[3], ('.string', 'words'))),
+    # Rule('$StringToBool', '$BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[0], sems[1], sems[3], ('.string', 'words')))),
+    
     # Rule('$Bool', '$POS ?$In $BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'pos_tags')), sems[0])),
     # Rule('$Bool', '$NER ?$In $BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'ner_tags')), sems[0])),
     
-    Rule('$StringList', '$SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: (sems[0], ('.string', 'words'))),
+    # Rule('$StringList', '$SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: (sems[0], ('.string', 'words'))),
+    
     # Rule('$Bool', '$POS ?$In $SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'pos_tags')), sems[0])),
     # Rule('$Bool', '$NER ?$In $SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'ner_tags')), sems[0])),
     
     Rule('$ArgX', '$Arg $Int', sems_in_order),
+    # Rule('$TokenList', '$ArgXToTokenList $ArgX', lambda sems: ('.call', )),
+    
+    # Rule('$ArgXToTokenList', '$Direction')
+    # Rule('$StringList', '$TokenList', TBD),
+    # Rule('$POSList', '$TokenList', TBD),
+    # Rule('$NERList', '$TokenList', TBD),
 ]
 
 snorkel_rules = lexical_rules + unary_rules + compositional_rules
@@ -186,8 +201,10 @@ snorkel_ops = {
     '.int': lambda x: lambda c: x,
     '.list': lambda *x: lambda c: [z(c) for z in x],
     '.user_list': lambda x: lambda c: c['user_lists'][x(c)],
-    '.call': lambda *x: lambda c: x[0](c) if len(x)==1 else x[0](c)(x[1](c)), # TODO: generalize to more inputs?
+    '.call': lambda *x: lambda c: x[0](c) if len(x)==1 else x[0](c)(x[1](c)), #TODO: extend to more than one argument?
     '.map': lambda x, y: lambda c: [x(c)(yi) for yi in y(c)],
+    # '.composite_and': lambda x, y: lambda c: lambda z: all([x(yi)(z) for yi in y(c)]),
+    '.composite_or': lambda x, y: lambda c: lambda z: any([x(yi)(c)(z) for yi in y]),
     # logic
     '.and': lambda *x: lambda c: all(xi(c) for xi in x),
     '.or': lambda *x: lambda c: any(xi(c) for xi in x),

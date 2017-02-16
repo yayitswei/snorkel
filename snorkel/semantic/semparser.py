@@ -24,6 +24,7 @@ class SemanticParser():
         for i, exp in enumerate(explanations):
             exp_parses = self.grammar.parse_input(exp)
             for j, parse in enumerate(exp_parses):
+                # print(parse.semantics)
                 lf = self.grammar.evaluate(parse)
                 if return_parses:
                     parse.function = lf
@@ -95,7 +96,8 @@ class SemanticParser():
                     nFailed += 1
             if nCorrect == 0:
                 print("WARNING: No parses found for the following explanation:")
-                print(parse.explanation)
+                print(example.explanation)
+                import pdb; pdb.set_trace()
 
             example_names.append('Example{}'.format(i))
             correct.append(nCorrect)

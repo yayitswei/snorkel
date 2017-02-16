@@ -145,41 +145,46 @@ test_examples = [
         explanation="label True because 'blue' contains 'l' and 'u'",
         candidate=('foo', 'bar'),
         denotation=1),
-#     # Left words
-#     Example(
-#         explanation="label True because 'wife' is in the words left of arg 2",
-#         candidate=-7563346943193853808,
-#         denotation=1),    
+    # Left words (list)
+    Example(
+        explanation="label True because 'wife' is in the words left of arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),    
+    # Right words (list)
+    Example(
+        explanation="label True because 'wife' is in the words to the right of arg 1",
+        candidate=-7563346943193853808,
+        denotation=1),    
+    # Between words (list)
+    Example(
+        explanation="label True because 'wife' is between arg 1 and arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),    
+    # Sentence (list)
+    Example(
+        explanation='label True because the word "wife" is in the sentence',
+        candidate=-7563346943193853808,
+        denotation=1),
 #     # Left words (paraphrase)
 #     Example(
 #         explanation="label True because 'wife' to the left of arg 2",
 #         candidate=-7563346943193853808,
 #         denotation=1),    
-#     # Right words
-#     Example(
-#         explanation="label True because 'wife' is in the words to the right of arg 1",
-#         candidate=-7563346943193853808,
-#         denotation=1),    
-#     # Between words
-#     Example(
-#         explanation="label True because 'wife' is between arg 1 and arg 2",
-#         candidate=-7563346943193853808,
-#         denotation=1),    
-#     # Sentence
-#     Example(
-#         explanation='label True because the word "wife" is in the sentence',
-#         candidate=-7563346943193853808,
-#         denotation=1),
 #     # ArgXOr
 #     Example(
 #         explanation="label True because 'wife' is to the left of arg 1 or arg 2",
 #         candidate=-7563346943193853808,
 #         denotation=1),
-    # Count
+    # Count0
     Example(
         explanation="label True because the number of words between arg 1 and arg 2 is less than 20",
         candidate=-7563346943193853808,
         denotation=1),
+    # # Count1
+    # Example(
+    #     explanation="label True because there are more than 3 words between arg 1 and arg 2",
+    #     candidate=-7563346943193853808,
+    #     denotation=1),
 #     # NER tags
 #     Example(
 #         explanation="label True because a person is to the left of arg 2",

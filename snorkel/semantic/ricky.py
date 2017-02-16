@@ -25,10 +25,10 @@ lexical_rules = [
     Rule('$And', 'and', '.and'),
     Rule('$All', 'all', '.all'),
     # direction
-    Rule('$LeftTokens', 'left', '.lefttokens'),
-    Rule('$RightTokens', 'right', '.righttokens'),
-    Rule('$BetweenTokens', 'between', '.betweentokens'),
-    Rule('$SentenceTokens', 'sentence', '.sentencetokens'),
+    Rule('$Left', 'left', '.left_tokens'),
+    Rule('$Right', 'right', '.right_tokens'),
+    Rule('$Between', 'between', '.betweentokens'),
+    Rule('$Sentence', 'sentence', '.sentence_tokens'),
     # POS tags
     Rule('$NounPOS', 'noun', ('.string', 'NN')),
     Rule('$NumberPOS', 'number', ('.string', 'CD')),
@@ -76,8 +76,8 @@ unary_rules = [
     Rule('$Inequals', '$AtLeast', sems0),
     Rule('$Compare', '$Inequals', sems0),
     Rule('$Compare', '$Equals', sems0),
-    Rule('$Direction', '$LeftTokens', sems0),
-    Rule('$Direction', '$RightTokens', sems0),
+    Rule('$Direction', '$Left', sems0),
+    Rule('$Direction', '$Right', sems0),
     Rule('$POS', '$NounPOS', sems0),
     Rule('$POS', '$NumberPOS', sems0),
     Rule('$StringList', '$UserList', sems0),
@@ -134,8 +134,7 @@ compositional_rules = [
     Rule('$StringToBool', '$BinaryStringToBool $String', lambda sems: (sems[0], sems[1])),
     Rule('$StringToBool', '$BinaryStringToBool $StringListAnd', lambda sems: ('.composite_and', (sems[0],), sems[1])),
     Rule('$StringToBool', '$BinaryStringToBool $StringListOr', lambda sems:  ('.composite_or',  (sems[0],), sems[1])),
-    
-    Rule('$StringToBool', '$In $StringList', sems_in_order), # TODO: unify me with the rest of the stringlisting going on
+    Rule('$StringToBool', '$In $StringList', sems_in_order),
     
     # Integers
         # applying $IntoToBool functions
@@ -162,31 +161,33 @@ compositional_rules = [
 
     # Context
     # Note: Normal 'X in Y' does not work because we need to know what they are looking for (e.g., words, pos, ner)
-    # Rule('$StringList', '$Direction $ArgX', lambda sems: (sems[0], sems[1], ('.string', 'words'))),
+    # Rule('$StringList', '$Word $Direction $ArgX', lambda sems: (sems[1], sems[2], sems[0])),
     # Rule('$StringList', '$Direction $ArgX $Or $ArgX', lambda sems: ('.merge', (sems[0], sems[1], ('.string', 'words')), (sems[0], sems[3], ('.string', 'words')))),
     # Rule('$StringToBool', '$Direction $ArgX', lambda sems: ('.in', (sems[0], sems[1], ('.string', 'words')))),
     
     # Rule('$Bool', '$POS ?$In $Direction $ArgX', lambda sems: ('.in', (sems[2], sems[3], ('.string', 'pos_tags')), sems[0])),
     # Rule('$Bool', '$NER ?$In $Direction $ArgX', lambda sems: ('.in', (sems[2], sems[3], ('.string', 'ner_tags')), sems[0])),
     
-    # Rule('$StringList', '$BetweenTokens $ArgX $And $ArgX', lambda sems: (sems[0], sems[1], sems[3], ('.string', 'words'))),
-    # Rule('$StringToBool', '$BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[0], sems[1], sems[3], ('.string', 'words')))),
+    # Rule('$StringList', '$Between $ArgX $And $ArgX', lambda sems: (sems[0], sems[1], sems[3], ('.string', 'words'))),
+    # Rule('$StringToBool', '$Between $ArgX $And $ArgX', lambda sems: ('.in', (sems[0], sems[1], sems[3], ('.string', 'words')))),
     
-    # Rule('$Bool', '$POS ?$In $BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'pos_tags')), sems[0])),
-    # Rule('$Bool', '$NER ?$In $BetweenTokens $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'ner_tags')), sems[0])),
+    # Rule('$Bool', '$POS ?$In $Between $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'pos_tags')), sems[0])),
+    # Rule('$Bool', '$NER ?$In $Between $ArgX $And $ArgX', lambda sems: ('.in', (sems[2], sems[3], sems[5], ('.string', 'ner_tags')), sems[0])),
     
-    # Rule('$StringList', '$SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: (sems[0], ('.string', 'words'))),
+    # Rule('$StringList', '$Sentence ?$ArgX ?$And ?$ArgX', lambda sems: (sems[0], ('.string', 'words'))),
     
-    # Rule('$Bool', '$POS ?$In $SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'pos_tags')), sems[0])),
-    # Rule('$Bool', '$NER ?$In $SentenceTokens ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'ner_tags')), sems[0])),
+    # Rule('$Bool', '$POS ?$In $Sentence ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'pos_tags')), sems[0])),
+    # Rule('$Bool', '$NER ?$In $Sentence ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'ner_tags')), sems[0])),
     
     Rule('$ArgX', '$Arg $Int', sems_in_order),
-    # Rule('$TokenList', '$ArgXToTokenList $ArgX', lambda sems: ('.call', )),
+
+    Rule('$TokenList', '$Direction $ArgX', sems_in_order),
+    Rule('$TokenList', '$Between $ArgX $And $ArgY', lambda sems: (sems[0], sems[1], sems[3])),
+    Rule('$TokenList', '$Sentence', lambda sems: (sems[0],)),
     
-    # Rule('$ArgXToTokenList', '$Direction')
-    # Rule('$StringList', '$TokenList', TBD),
-    # Rule('$POSList', '$TokenList', TBD),
-    # Rule('$NERList', '$TokenList', TBD),
+    Rule('$StringList', '?$Word $TokenList', lambda sems: ('.field', sems[1], ('.string', 'words'))),
+    # Rule('$POSList', '$POS $TokenList', lambda sems: ('.field', sems[1], '')),
+    # Rule('$NERList', '$NER $TokenList', lambda sems: ('.field', sems[1], '')),
 ]
 
 snorkel_rules = lexical_rules + unary_rules + compositional_rules
@@ -232,15 +233,16 @@ snorkel_ops = {
     '.contains': lambda x: lambda cx: lambda y: lambda cy: x(cx) in y(cy),
     '.count': lambda x: lambda c: len(x(c)),
     '.sum': lambda x: lambda c: sum(x(c)),
-    # '.index': lambda x, y: lambda c: x(c)[max(0, y(c) - 1)], # account for 0-indexing 
-    # '.slice': lambda x, y, z: lambda c: x(c)[y(c):z(c)], 
-    # '.merge': lambda x, y: lambda c: x(c) + y(c),
+        # '.index': lambda x, y: lambda c: x(c)[max(0, y(c) - 1)], # account for 0-indexing 
+        # '.slice': lambda x, y, z: lambda c: x(c)[y(c):z(c)], 
+        # '.merge': lambda x, y: lambda c: x(c) + y(c),
     # context
-    '.lefttokens': lambda x, y: lambda c: c['lf_helpers']['get_left_tokens'](x(c), y(c)),
-    '.righttokens': lambda x, y: lambda c: c['lf_helpers']['get_right_tokens'](x(c), y(c)),
-    '.betweentokens': lambda x, y, z: lambda c: c['lf_helpers']['get_between_tokens'](x(c), y(c), z(c)),
-    '.sentencetokens': lambda x: lambda c: c['lf_helpers']['get_sentence_tokens'](c['candidate'][0], x(c)),
+    '.left_tokens': lambda x: lambda c: c['lf_helpers']['get_left_tokens'](x(c)),
+    '.right_tokens': lambda x: lambda c: c['lf_helpers']['get_right_tokens'](x(c)),
+    '.between_tokens': lambda x, y: lambda c: c['lf_helpers']['get_right_tokens'](x(c), y(c)),
+    '.sentence_tokens': lambda c: c['lf_helpers']['get_sentence_tokens'](c['candidate'][0]),
+    '.field': lambda x, y: lambda c: x(c)[y(c)],
     '.arg': lambda x: lambda c: c['candidate'][x(c) - 1],
-        # FIXME: For ease of testing, temporarily allow tuples of strings in place of legitimate candidates
+        # For ease of testing, temporarily allow tuples of strings in place of legitimate candidates
     '.arg_to_string': lambda x: lambda c: x(c) if isinstance(x(c), basestring) else x(c).get_span(),
     }

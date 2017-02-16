@@ -34,9 +34,6 @@ lexical_rules = [
     Rule('$NumberPOS', 'number', ('.string', 'CD')),
     # other
     Rule('$In', 'in', '.in'),
-    Rule('$Contains', 'contains', '.contains'),
-    Rule('$StartsWith', 'starts with', '.startswith'),
-    Rule('$EndsWith', 'ends with', '.endswith'),
     Rule('$Label', 'label ?it', '.label'),
 ]
 
@@ -56,6 +53,9 @@ lexical_rules.extend(
     [Rule('$AtMost', w, '.atmost') for w in ['at most', 'no larger than', 'less than or equal', 'within', '<=']] +
     [Rule('$MoreThan', w, '.more') for w in ['more than', 'greater than', 'larger than', '>']] + 
     [Rule('$AtLeast', w, '.atleast') for w in ['at least', 'no less than', 'no smaller than', 'greater than or equal', '>=']] +
+    [Rule('$Contains', w, '.contains') for w in ['contains', 'contain']] +
+    [Rule('$StartsWith', w, '.startswith') for w in ['starts with', 'start with']] +
+    [Rule('$EndsWith', w, '.endswith') for w in ['ends with', 'end with']] +
     # [Rule('$ListWord', w) for w in ['list', 'set', 'group']] + 
     [Rule('$Separator', w) for w in [',', ';', '/']] +
     [Rule('$Count', w, '.count') for w in ['number', 'length', 'count']] +
@@ -117,7 +117,7 @@ compositional_rules = [
     # Rule('$StringListStub', '$StringListStub ?$Separator ?$And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
     # Rule('$StringList', '$StringListStub ?$CloseParen', sems0),
 
-        # building implicit string lists
+        # building string lists
     Rule('$StringList', '$String', lambda sems: ('.list', sems[0])),
     Rule('$StringList', '$StringList ?$Separator $String', lambda sems: tuple((list(sems[0]) + [sems[2]]))),
     Rule('$StringListOr', '$StringList ?$Separator $Or $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
@@ -129,11 +129,11 @@ compositional_rules = [
     Rule('$Bool', '$StringListAnd $StringToBool', lambda sems: ('.and', ('.map', sems[1], sems[0]))),
     Rule('$BoolList', '$StringList $StringToBool', lambda sems: ('.map', sems[1], sems[0])),
 
-        # defining #StringToBool functions
+        # defining $StringToBool functions
     Rule('$StringToBool', '$UnaryStringToBool', lambda sems: (sems[0],)),
     Rule('$StringToBool', '$BinaryStringToBool $String', lambda sems: (sems[0], sems[1])),
-    # Rule('$StringToBool', '$BinaryStringToBool $StringListAnd', lambda sems: ('.composite_and', (sems[0], sems[1]))),
-    Rule('$StringToBool', '$BinaryStringToBool $StringListOr', lambda sems: ('.composite_or', (sems[0],), sems[1])),
+    Rule('$StringToBool', '$BinaryStringToBool $StringListAnd', lambda sems: ('.composite_and', (sems[0],), sems[1])),
+    Rule('$StringToBool', '$BinaryStringToBool $StringListOr', lambda sems:  ('.composite_or',  (sems[0],), sems[1])),
     
     Rule('$StringToBool', '$In $StringList', sems_in_order), # TODO: unify me with the rest of the stringlisting going on
     
@@ -194,44 +194,47 @@ snorkel_rules = lexical_rules + unary_rules + compositional_rules
 snorkel_ops = {
     # root
     '.root': lambda x: lambda c: x(c),
-    '.label': lambda x, y: lambda c: (-1 if not x(c) else 1) if y(c)==True else 0,
+    '.label': lambda x, y: lambda c: (1 if x(c)==True else -1) if y(c)==True else 0,
     # primitives
     '.bool': lambda x: lambda c: x,
     '.string': lambda x: lambda c: x,
     '.int': lambda x: lambda c: x,
+    # lists
     '.list': lambda *x: lambda c: [z(c) for z in x],
     '.user_list': lambda x: lambda c: c['user_lists'][x(c)],
-    '.call': lambda *x: lambda c: x[0](c) if len(x)==1 else x[0](c)(x[1](c)), #TODO: extend to more than one argument?
-    '.map': lambda x, y: lambda c: [x(c)(yi) for yi in y(c)],
-    # '.composite_and': lambda x, y: lambda c: lambda z: all([x(yi)(z) for yi in y(c)]),
-    '.composite_or': lambda x, y: lambda c: lambda z: any([x(yi)(c)(z) for yi in y]),
+        # apply a function x to elements in list y
+    '.map': lambda x, y: lambda cxy: [x(cxy)(lambda c: yi)(cxy) for yi in y(cxy)],
+    '.call': lambda *x: lambda c: x[0](c)(x[1])(c), #TODO: extend to more than one argument?
+        # apply an element to a list of functions (then call 'any' or 'all' to convert to boolean)
+    '.composite_and': lambda x, y: lambda cxy: lambda z: lambda cz: all([x(lambda c: yi)(cxy)(z(cz)) for yi in y(cxy)]), # apply
+    '.composite_or':  lambda x, y: lambda cxy: lambda z: lambda cz: any([x(lambda c: yi)(cxy)(z(cz)) for yi in y(cxy)]), # apply
     # logic
-    '.and': lambda *x: lambda c: all(xi(c) for xi in x),
-    '.or': lambda *x: lambda c: any(xi(c) for xi in x),
+    '.and': lambda *x: lambda c: all(xi(c)==True for xi in x),
+    '.or': lambda *x: lambda c: any(xi(c)==True for xi in x),
     '.not': lambda x: lambda c: not x(c),
-    '.all': lambda x: lambda c: all(x(c)),
-    '.any': lambda x: lambda c: any(x(c)),
-    '.none': lambda x: lambda c: not any(x(c)),
+    '.all': lambda x: lambda c: all(xi==True for xi in x(c)),
+    '.any': lambda x: lambda c: any(xi==True for xi in x(c)),
+    '.none': lambda x: lambda c: not any(xi==True for xi in x(c)),
     # comparisons
-    '.equals': lambda x: lambda c: lambda y: y == x(c),
-    '.less': lambda x: lambda c: lambda y: y < x(c),
-    '.atmost': lambda x: lambda c: lambda y: y <= x(c),
-    '.more': lambda x: lambda c: lambda y: y > x(c),
-    '.atleast': lambda x: lambda c: lambda y: y >= x(c),
+    '.equals': lambda x: lambda cx: lambda y: lambda cy: y(cy) == x(cx),
+    '.less': lambda x: lambda cx: lambda y: lambda cy: y(cy) < x(cx),
+    '.atmost': lambda x: lambda cx: lambda y: lambda cy: y(cy) <= x(cx),
+    '.more': lambda x: lambda cx: lambda y: lambda cy: y(cy) > x(cx),
+    '.atleast': lambda x: lambda cx: lambda y: lambda cy: y(cy) >= x(cx),
     # string functions
-    '.upper': lambda c: lambda x: x.isupper(),
-    '.lower': lambda c: lambda x: x.islower(),
-    '.capital': lambda c: lambda x: x[0].isupper(),
-    '.startswith': lambda x: lambda c: lambda y: y.startswith(x(c)),
-    '.endswith': lambda x: lambda c: lambda y: y.endswith(x(c)),
+    '.upper': lambda c: lambda x: lambda cx: x(cx).isupper(),
+    '.lower': lambda c: lambda x: lambda cx: x(cx).islower(),
+    '.capital': lambda c: lambda x: lambda cx: x(cx)[0].isupper(),
+    '.startswith': lambda x: lambda cx: lambda y: lambda cy: y(cy).startswith(x(cx)),
+    '.endswith': lambda x: lambda cx: lambda y: lambda cy: y(cy).endswith(x(cx)),
     # lists
-    '.in': lambda x: lambda c: lambda y: y in x(c),
-    '.contains': lambda x: lambda c: lambda y: x(c) in y,
-    '.index': lambda x, y: lambda c: x(c)[max(0, y(c) - 1)], # account for 0-indexing 
-    '.slice': lambda x, y, z: lambda c: x(c)[y(c):z(c)], 
+    '.in': lambda x: lambda cx: lambda y: lambda cy: y(cy) in x(cx),
+    '.contains': lambda x: lambda cx: lambda y: lambda cy: x(cx) in y(cy),
     '.count': lambda x: lambda c: len(x(c)),
     '.sum': lambda x: lambda c: sum(x(c)),
-    '.merge': lambda x, y: lambda c: x(c) + y(c),
+    # '.index': lambda x, y: lambda c: x(c)[max(0, y(c) - 1)], # account for 0-indexing 
+    # '.slice': lambda x, y, z: lambda c: x(c)[y(c):z(c)], 
+    # '.merge': lambda x, y: lambda c: x(c) + y(c),
     # context
     '.lefttokens': lambda x, y: lambda c: c['lf_helpers']['get_left_tokens'](x(c), y(c)),
     '.righttokens': lambda x, y: lambda c: c['lf_helpers']['get_right_tokens'](x(c), y(c)),

@@ -95,7 +95,7 @@ class SemanticParser():
                     import pdb; pdb.set_trace()
                     nFailed += 1
             if nCorrect == 0:
-                print("WARNING: No parses found for the following explanation:")
+                print("WARNING: No correct parses found for the following explanation:")
                 print(example.explanation)
                 import pdb; pdb.set_trace()
 

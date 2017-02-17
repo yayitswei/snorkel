@@ -117,7 +117,7 @@ test_examples = [
         denotation=1),
     # List
     Example(
-        explanation="label True because 'bar' is in the list ('foo','bar','baz')",
+        explanation="label True because arg 2 is 'foo', 'bar', or 'baz'",
         candidate=('foo', 'bar'),
         denotation=1),
     # UserList
@@ -165,26 +165,31 @@ test_examples = [
         explanation='label True because the word "wife" is in the sentence',
         candidate=-7563346943193853808,
         denotation=1),
+    # Tokens
+    Example(
+        explanation="label True because a word to the left of arg 2 is lower case",
+        candidate=-7563346943193853808,
+        denotation=1),    
 #     # Left words (paraphrase)
 #     Example(
 #         explanation="label True because 'wife' to the left of arg 2",
 #         candidate=-7563346943193853808,
-#         denotation=1),    
-#     # ArgXOr
-#     Example(
-#         explanation="label True because 'wife' is to the left of arg 1 or arg 2",
-#         candidate=-7563346943193853808,
 #         denotation=1),
+    ####
+
+    # MANY MORE TO COME HERE (see research notes)
+
+    ####
     # Count0
     Example(
         explanation="label True because the number of words between arg 1 and arg 2 is less than 20",
         candidate=-7563346943193853808,
         denotation=1),
-    # # Count1
-    # Example(
-    #     explanation="label True because there are more than 3 words between arg 1 and arg 2",
-    #     candidate=-7563346943193853808,
-    #     denotation=1),
+    # Count1
+    Example(
+        explanation="label True because there are more than 3 words between arg 1 and arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),
 #     # NER tags
 #     Example(
 #         explanation="label True because a person is to the left of arg 2",
@@ -330,10 +335,10 @@ cdr_examples = [
         explanation="Label false because arg 1 ends with 'induced'",
         candidate=('blue-induced', 'coma'),
         denotation=-1),
-    # Example(
-    #     explanation="Label false because any between arg 1 and arg 2 ends with '-induced'",
-    #     candidate=None,
-    #     denotation=-1),
+    Example(
+        explanation="Label true because 'develop' is before the arg 2 and 'following' is between the arg 1 and arg 2",
+        candidate=('blue-induced', 'coma'),
+        denotation=-1),
 ]
 
 

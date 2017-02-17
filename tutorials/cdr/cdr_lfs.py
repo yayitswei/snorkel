@@ -57,14 +57,20 @@ def get_cdr_lfs():
     causal_past = ['induced', 'caused', 'due']
     def LF_d_induced_by_c(c):
         """
-        Label True because 'induced' or 'caused' or 'due' and 'by' or 'to' is between the disease and the chemical.
+        Label True because 'induced', 'caused', or 'due' and 'by' or 'to' are between the disease and the chemical.
         """
         return rule_regex_search_btw_BA(c, '.{0,50}' + ltp(causal_past) + '.{0,9}(by|to).{0,50}', 1)
 
     def LF_d_induced_by_c_tight(c):
+        """
+        (redundant?)
+        """
         return rule_regex_search_btw_BA(c, '.{0,50}' + ltp(causal_past) + ' (by|to) ', 1)
 
     def LF_induce_name(c):
+        """
+        Label True because 'induc' is in the chemical name.
+        """
         return 1 if 'induc' in c.chemical.get_span().lower() else 0     
 
     causal = ['cause[sd]?', 'induce[sd]?', 'associated with']
@@ -85,6 +91,9 @@ def get_cdr_lfs():
         return rule_regex_search_btw_AB(c, '.{0,200}' + ltp(treat) + '.{0,200}', -1)
 
     def LF_c_d(c):
+        """
+        Label true because the chemical is immediately followed by the disease
+        """
         return 1 if ('{{A}} {{B}}' in get_tagged_text(c)) else 0
 
     def LF_c_induced_d(c):
@@ -130,13 +139,13 @@ def get_cdr_lfs():
 
     def LF_risk_d(c):
         """
-        Label false because the phrase 'risk of ' occurs before B in the sentence. # note 'in the sentence' is red herring
+        Label false because the phrase 'risk of ' occurs before B in the sentence. #NOTE: 'in the sentence' is red herring
         """
         return rule_regex_search_before_B(c, 'risk of ', 1)
 
     def LF_develop_d_following_c(c):
         """
-        Label true because 'develop' is before the disease and 'following' is between the disease and the chemical
+        DONE: Label true because 'develop' is before the disease and 'following' is between the disease and the chemical
         """
         return 1 if re.search(r'develop.{0,25}{{B}}.{0,25}following.{0,25}{{A}}', get_tagged_text(c), flags=re.I) else 0
 

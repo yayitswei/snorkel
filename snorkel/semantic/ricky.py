@@ -25,13 +25,10 @@ lexical_rules = [
     Rule('$And', 'and', '.and'),
     Rule('$All', 'all', '.all'),
     # direction
-    Rule('$Left', 'left', '.left_tokens'),
-    Rule('$Right', 'right', '.right_tokens'),
-    Rule('$Between', 'between', '.betweentokens'),
     Rule('$Sentence', 'sentence', '.sentence_tokens'),
     # POS tags
-    Rule('$NounPOS', 'noun', ('.string', 'NN')),
-    Rule('$NumberPOS', 'number', ('.string', 'CD')),
+    # Rule('$NounPOS', 'noun', ('.string', 'NN')),
+    # Rule('$NumberPOS', 'number', ('.string', 'CD')),
     # other
     Rule('$In', 'in', '.in'),
     Rule('$Label', 'label ?it', '.label'),
@@ -50,12 +47,16 @@ lexical_rules.extend(
     [Rule('$Capital', w, '.capital') for w in ['capital', 'capitals', 'capitalized']] +
     [Rule('$Equals', w, '.equals') for w in ['is', 'equal', 'equals', '=', '==', 'same ?as', 'identical']] + 
     [Rule('$LessThan', w, '.less') for w in ['less than', 'smaller than', '<']] +
-    [Rule('$AtMost', w, '.atmost') for w in ['at most', 'no larger than', 'less than or equal', 'within', '<=']] +
+    [Rule('$AtMost', w, '.atmost') for w in ['at most', 'no larger than', 'less than or equal', 'within', 'no more than', '<=']] +
     [Rule('$MoreThan', w, '.more') for w in ['more than', 'greater than', 'larger than', '>']] + 
     [Rule('$AtLeast', w, '.atleast') for w in ['at least', 'no less than', 'no smaller than', 'greater than or equal', '>=']] +
+    [Rule('$Exists', w) for w in ['there is', 'there are', 'exists']] +
     [Rule('$Contains', w, '.contains') for w in ['contains', 'contain']] +
     [Rule('$StartsWith', w, '.startswith') for w in ['starts with', 'start with']] +
     [Rule('$EndsWith', w, '.endswith') for w in ['ends with', 'end with']] +
+    [Rule('$Left', w, '.left_tokens') for w in ['left', 'before', 'precedes', 'preceding']] +
+    [Rule('$Right', w, '.right_tokens') for w in ['right', 'after', 'follows', 'following']] +
+    [Rule('$Between', w, '.between_tokens') for w in ['between', 'inbetween']] +
     # [Rule('$ListWord', w) for w in ['list', 'set', 'group']] + 
     [Rule('$Separator', w) for w in [',', ';', '/']] +
     [Rule('$Count', w, '.count') for w in ['number', 'length', 'count']] +
@@ -78,8 +79,8 @@ unary_rules = [
     Rule('$Compare', '$Equals', sems0),
     Rule('$Direction', '$Left', sems0),
     Rule('$Direction', '$Right', sems0),
-    Rule('$POS', '$NounPOS', sems0),
-    Rule('$POS', '$NumberPOS', sems0),
+    # Rule('$POS', '$NounPOS', sems0),
+    # Rule('$POS', '$NumberPOS', sems0),
     Rule('$StringList', '$UserList', sems0),
     Rule('$UnaryStringToBool', '$Lower', sems0),
     Rule('$UnaryStringToBool', '$Upper', sems0),
@@ -93,6 +94,12 @@ unary_rules = [
     Rule('$String', '$ArgX', lambda sems: ('.arg_to_string', sems[0])),
     Rule('$StringList', 'StringListOr', sems0),
     Rule('$StringList', 'StringListAnd', sems0),
+    Rule('$List', '$BoolList', sems0),
+    Rule('$List', '$StringList', sems0),
+    Rule('$List', '$IntList', sems0),
+    Rule('$List', '$POSList', sems0),
+    Rule('$List', '$NERList', sems0),
+    # Rule('$List', '$CIDList', sems0),
     Rule('$ROOT', '$LF', lambda sems: ('.root', sems[0])),
 ]
 
@@ -111,16 +118,15 @@ compositional_rules = [
     Rule('$StringStub', '$Quote $Token', lambda sems: [sems[1]]),
     Rule('$StringStub', '$StringStub $Token', lambda sems: sems[0] + [sems[1]]),
     Rule('$String', '$StringStub $Quote', lambda sems: ('.string', ' '.join(sems[0]))),
-    
-        # building explicit string lists
-    # Rule('$StringListStub', '?$OpenParen $String', lambda sems: ('.list', sems[1])),
-    # Rule('$StringListStub', '$StringListStub ?$Separator ?$And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
-    # Rule('$StringList', '$StringListStub ?$CloseParen', sems0),
 
-        # building string lists
-    Rule('$StringList', '$String', lambda sems: ('.list', sems[0])),
+        # building string lists (TODO: remove some redundancies here?)
+    Rule('$StringList', '$String ?$Separator $String', lambda sems: ('.list', sems[0], sems[2])),
     Rule('$StringList', '$StringList ?$Separator $String', lambda sems: tuple((list(sems[0]) + [sems[2]]))),
+    
+    Rule('$StringListOr', '$String ?$Separator $Or $String', lambda sems: ('.list', sems[0], sems[3])),
     Rule('$StringListOr', '$StringList ?$Separator $Or $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
+
+    Rule('$StringListOr', '$String ?$Separator $And  $String', lambda sems: ('.list', sems[0], sems[3])),
     Rule('$StringListAnd', '$StringList ?$Separator $And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
 
         # applying $StringToBool functions
@@ -148,10 +154,23 @@ compositional_rules = [
     Rule('$IntToBool', '$Contains $Int', sems_in_order),
     Rule('$IntToBool', '$Compare $Int', sems_in_order),
 
-    # Rule('$Int', '$Count ?$In $List', lambda sems: (sems[0], sems[2])),
+        # count
+    Rule('$Int', '$Count $List', sems_in_order),
+    Rule('$Bool', '$Exists $IntToBool $List', lambda sems: ('.call', sems[1], ('.count', sems[2]))),
     
+    # Context
+    Rule('$ArgX', '$Arg $Int', sems_in_order),
+
+    Rule('$TokenList', '$Direction $ArgX', sems_in_order),
+    Rule('$TokenList', '$Between $ArgX $And $ArgX', lambda sems: (sems[0], sems[1], sems[3])),
+    Rule('$TokenList', '$Sentence', lambda sems: (sems[0],)),
+    
+    Rule('$StringList', '?$Word $TokenList', lambda sems: ('.field', sems[1], ('.string', 'words'))),
+    # Rule('$POSList', '$POS $TokenList', lambda sems: ('.field', sems[1], '')),
+    # Rule('$NERList', '$NER $TokenList', lambda sems: ('.field', sems[1], '')),
+
     # Slices
-    #TODO: Test these more thoroughly
+    # TODO: Test these more thoroughly
     # Rule('$String', '$Int $StringList', lambda sems: ('.index', sems[1], sems[0])),
     # Rule('$StringList', '$LessThan $Int $StringList', lambda sems: ('.slice', sems[2], ('.int', 0), sems[1])),
     # Rule('$StringList', '$AtMost $Int $StringList', lambda sems: ('.slice', sems[2], ('.int', 0), ('.int', sems[1][1] + 1))),
@@ -178,16 +197,6 @@ compositional_rules = [
     
     # Rule('$Bool', '$POS ?$In $Sentence ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'pos_tags')), sems[0])),
     # Rule('$Bool', '$NER ?$In $Sentence ?$ArgX ?$And ?$ArgX', lambda sems: ('.in', (sems[2], ('.string', 'ner_tags')), sems[0])),
-    
-    Rule('$ArgX', '$Arg $Int', sems_in_order),
-
-    Rule('$TokenList', '$Direction $ArgX', sems_in_order),
-    Rule('$TokenList', '$Between $ArgX $And $ArgY', lambda sems: (sems[0], sems[1], sems[3])),
-    Rule('$TokenList', '$Sentence', lambda sems: (sems[0],)),
-    
-    Rule('$StringList', '?$Word $TokenList', lambda sems: ('.field', sems[1], ('.string', 'words'))),
-    # Rule('$POSList', '$POS $TokenList', lambda sems: ('.field', sems[1], '')),
-    # Rule('$NERList', '$NER $TokenList', lambda sems: ('.field', sems[1], '')),
 ]
 
 snorkel_rules = lexical_rules + unary_rules + compositional_rules
@@ -239,7 +248,7 @@ snorkel_ops = {
     # context
     '.left_tokens': lambda x: lambda c: c['lf_helpers']['get_left_tokens'](x(c)),
     '.right_tokens': lambda x: lambda c: c['lf_helpers']['get_right_tokens'](x(c)),
-    '.between_tokens': lambda x, y: lambda c: c['lf_helpers']['get_right_tokens'](x(c), y(c)),
+    '.between_tokens': lambda x, y: lambda c: c['lf_helpers']['get_between_tokens'](x(c), y(c)),
     '.sentence_tokens': lambda c: c['lf_helpers']['get_sentence_tokens'](c['candidate'][0]),
     '.field': lambda x, y: lambda c: x(c)[y(c)],
     '.arg': lambda x: lambda c: c['candidate'][x(c) - 1],

@@ -14,7 +14,7 @@ class Grammar(object):
     def __init__(self, rules=[], ops={}, candidate_class=None, annotators=[], 
                  user_lists={}, absorb=True, start_symbol='$ROOT'):
         self.ops = ops
-        self.candidate_class = candidate_class
+        self.candidate_class = candidate_class # candidate_class.__argnames__ = ['chemical', 'disease']
         self.annotators = annotators
         self.user_lists = user_lists
         self.absorb = absorb
@@ -30,7 +30,7 @@ class Grammar(object):
             for rule in annotator.rules:
                 self.add_rule(rule)
         if user_lists:
-            self.add_rule(Rule('$UserList', ('$UserList', '$Token'), lambda sems: sems[0]))
+            self.add_rule(Rule('$UserList', ('$UserList', '$QueryToken'), lambda sems: sems[0]))
         print('Created grammar with %d rules' % \
             (len(self.lexical_rules) + len(self.unary_rules) + len(self.binary_rules)))
 
@@ -41,13 +41,6 @@ class Grammar(object):
         """
         input = input.lower()
         tokens = self.corenlp.parse(input)
-        # stopwords = ['there','is','are','the','a','an','of','from','away','to','word','words','letter','letters']
-        # tokens = [t for i, t in enumerate(tokens) if (
-        #     t['word'] not in stopwords or
-        #     tokens[max(i-1,0)]['pos'] == "``" or
-        #     tokens[min(i+1, len(tokens)-1)]['pos'] == "\'\'"
-        #     )
-        # ]
         words = [t['word'] for t in tokens]
         chart = defaultdict(list)
         for j in range(1, len(tokens) + 1):
@@ -120,7 +113,7 @@ class Grammar(object):
 
     def add_absorption_rule(self, rule):
         lhs = rule.lhs
-        rhs = (rule.lhs, '$Token')
+        rhs = (rule.lhs, '$QueryToken')
         new_rule = Rule(lhs, rhs, rule.sem)
         if new_rule not in self.binary_rules[new_rule.rhs]:
             self.binary_rules[new_rule.rhs].append(new_rule)
@@ -201,6 +194,14 @@ class Grammar(object):
         for parse in chart[(i, j)]:
             for rule in self.unary_rules[(parse.rule.lhs,)]:
                 chart[(i, j)].append(Parse(rule, [parse]))
+        # while True:
+        #     nStart = len(chart[(i, j)])
+        #     for parse in list(chart[(i, j)]):
+        #         for rule in self.unary_rules[(parse.rule.lhs,)]:
+        #             chart[(i, j)].append(Parse(rule, [parse]))
+        #     nEnd = len(chart[(i,j)])
+        #     if nEnd == nStart:
+        #         return
 
     def evaluate(self, parse):
         def recurse(semantics):
@@ -234,8 +235,8 @@ class Grammar(object):
             if len(self.chart[span]) > 0:
                 print('%-12s' % str(span), end=' ')
                 if nested:
-                    print(self.chart[span][0])
-                    for entry in self.chart[span][1:]:
+                    # print(self.chart[span][0])
+                    for entry in self.chart[span]:
                         print('%-12s' % ' ', entry)
                 else:
                     print(' '.join(words[span[0]:span[1]]))
@@ -333,7 +334,16 @@ class Parse:
         self.function = None
         self.validate_parse()
 
-    def __str__(self):
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+    
+    def __ne__(self, other):
+        return (not self.__eq__(other))
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+    def __repr__(self):
         child_strings = [str(child) for child in self.children]
         return '(%s %s)' % (self.rule.lhs, ' '.join(child_strings))
 

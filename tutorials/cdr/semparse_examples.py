@@ -165,11 +165,6 @@ test_examples = [
         explanation='label True because the word "wife" is in the sentence',
         candidate=-7563346943193853808,
         denotation=1),
-    # Tokens
-    Example(
-        explanation="label True because a word to the left of arg 2 is lower case",
-        candidate=-7563346943193853808,
-        denotation=1),    
 #     # Left words (paraphrase)
 #     Example(
 #         explanation="label True because 'wife' to the left of arg 2",
@@ -180,6 +175,36 @@ test_examples = [
     # MANY MORE TO COME HERE (see research notes)
 
     ####
+    # Tokens
+    Example(
+        explanation="label True because a word to the left of arg 2 is lower case",
+        candidate=-7563346943193853808,
+        denotation=1),    
+    # POS0
+    Example(
+        explanation="label True because a noun is between arg 1 and arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),
+    # POS1
+    Example(
+        explanation="label True because there is one noun to the left of arg 1",
+        candidate=-7563346943193853808,
+        denotation=1),
+    # POS2
+    Example(
+        explanation="label True because there are less than two nouns to the left of arg 1",
+        candidate=-7563346943193853808,
+        denotation=1),
+    # POS2
+    Example(
+        explanation="label True because there are not more than two nouns to the left of arg 1",
+        candidate=-7563346943193853808,
+        denotation=1),
+    # NER
+    Example(
+        explanation="label True because there are no people between arg 1 and arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),
     # Count0
     Example(
         explanation="label True because the number of words between arg 1 and arg 2 is less than 20",
@@ -190,14 +215,14 @@ test_examples = [
         explanation="label True because there are more than 3 words between arg 1 and arg 2",
         candidate=-7563346943193853808,
         denotation=1),
+    # Count2
+    Example(
+        explanation="label True because a word is between arg 1 and arg 2",
+        candidate=-7563346943193853808,
+        denotation=1),
 #     # NER tags
 #     Example(
 #         explanation="label True because a person is to the left of arg 2",
-#         candidate=-7563346943193853808,
-#         denotation=1),
-#     # POS tags
-#     Example(
-#         explanation="label True because a noun is between arg 1 and arg 2",
 #         candidate=-7563346943193853808,
 #         denotation=1),
 #     # Index
@@ -222,7 +247,7 @@ test_examples = [
         denotation=1),
     # Any
     Example(
-        explanation='label True because any of the words letters are lowercase',
+        explanation='label True because any of the letters are lowercase',
         candidate=('foo', 'bar'),
         denotation=1),
     # None
@@ -255,6 +280,11 @@ test_examples = [
 #         explanation="label True because there is at least one spouse word within two words to the left of arg 1 or arg 2",
 #         candidate=-7563346943193853808,
 #         denotation=1),
+    # Composition4
+    Example(
+        explanation="label True because at least one word to the left of arg 2 starts with a spouse word",
+        candidate=-7563346943193853808,
+        denotation=1),
     # # Slice0
     # Example(
     #     explanation="label True because 'wife' is within two words to the left of arg 2",

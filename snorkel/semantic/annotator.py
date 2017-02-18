@@ -15,7 +15,7 @@ class Annotator:
         """Returns a list of lexical rules"""
         rules = []
         for lhs in self.categories:
-            rules.append(Rule(lhs, (lhs, '$Token'), lambda sems: sems[0]))
+            rules.append(Rule(lhs, (lhs, '$QueryToken'), lambda sems: sems[0]))
         return rules
 
 class TokenAnnotator(Annotator):
@@ -25,7 +25,7 @@ class TokenAnnotator(Annotator):
     
     def annotate(self, tokens):
         if len(tokens) == 1:
-            return [('$Token', tokens[0]['word'])]
+            return [('$QueryToken', tokens[0]['word'])]
         else:
             return []
 

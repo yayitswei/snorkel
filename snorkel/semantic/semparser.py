@@ -91,7 +91,8 @@ class SemanticParser():
                                 nIncorrect += 1
                 except:
                     if show_failed: print("F: {}".format(parse.semantics))
-                    print parse.function(example.candidate)
+                    print parse.semantics
+                    print parse.function(example.candidate) #to display traceback
                     import pdb; pdb.set_trace()
                     nFailed += 1
             if nCorrect == 0:

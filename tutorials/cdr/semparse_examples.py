@@ -205,6 +205,11 @@ test_examples = [
         explanation="label True because there are no people between arg 1 and arg 2",
         candidate=-7563346943193853808,
         denotation=1),
+    # NER
+    Example(
+        explanation="label True because there are not three people in the sentence",
+        candidate=-7563346943193853808,
+        denotation=1),
     # Count0
     Example(
         explanation="label True because the number of words between arg 1 and arg 2 is less than 20",

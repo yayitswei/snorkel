@@ -42,6 +42,7 @@ class Grammar(object):
         input = input.lower()
         tokens = self.corenlp.parse(input)
         words = [t['word'] for t in tokens]
+        self.words = words # TEMP (for print_chart)
         chart = defaultdict(list)
         for j in range(1, len(tokens) + 1):
             for i in range(j - 1, -1, -1):
@@ -227,19 +228,18 @@ class Grammar(object):
         print('Binary rules:')
         print_rules_sorted(all_rules(self.binary_rules))
 
-    def print_chart(self, nested=False, words=None):
+    def print_chart(self, nested=False):
         """Print the chart.  Useful for debugging."""
         spans = sorted(list(self.chart.keys()), key=(lambda span: span[0]))
         spans = sorted(spans, key=(lambda span: span[1] - span[0]))
         for span in spans:
             if len(self.chart[span]) > 0:
-                print('%-12s' % str(span), end=' ')
+                print('%-12s' % str(span))
                 if nested:
-                    # print(self.chart[span][0])
                     for entry in self.chart[span]:
                         print('%-12s' % ' ', entry)
                 else:
-                    print(' '.join(words[span[0]:span[1]]))
+                    print(' '.join(self.words[span[0]:span[1]]))
                     for entry in self.chart[span]:
                         print('%-12s' % ' ', entry.rule.lhs)
 

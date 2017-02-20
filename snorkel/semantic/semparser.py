@@ -86,6 +86,8 @@ class SemanticParser():
                             if parse.function(example.candidate)==example.denotation:
                                 if show_correct: print("C: {}".format(parse.semantics))
                                 nCorrect += 1
+                                # TEMP
+                                print(parse)
                             else:
                                 if show_incorrect: print("I: {}".format(parse.semantics))
                                 nIncorrect += 1

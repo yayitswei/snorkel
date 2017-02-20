@@ -78,12 +78,12 @@ unary_rules = [
     Rule('$Conj', '$Or', sems0),
     Rule('$Exists', '$Is'),
     Rule('$Equals', '$Is', '.equals'),
-    Rule('$Inequals', '$LessThan', sems0),
-    Rule('$Inequals', '$AtMost', sems0),
-    Rule('$Inequals', '$MoreThan', sems0),
-    Rule('$Inequals', '$AtLeast', sems0),
-    Rule('$Compare', '$Inequals', sems0),
     Rule('$Compare', '$Equals', sems0),
+    Rule('$Compare', '$NotEquals', sems0),
+    Rule('$Compare', '$LessThan', sems0),
+    Rule('$Compare', '$AtMost', sems0),
+    Rule('$Compare', '$MoreThan', sems0),
+    Rule('$Compare', '$AtLeast', sems0),
     Rule('$Direction', '$Left', sems0),
     Rule('$Direction', '$Right', sems0),
     Rule('$POS', '$NounPOS', sems0),
@@ -100,7 +100,7 @@ unary_rules = [
     Rule('$BinaryStringToBool', '$EndsWith', sems0),
     Rule('$BinaryStringToBool', '$In', sems0),
     Rule('$BinaryStringToBool', '$Contains', sems0),
-    Rule('$BinaryStringToBool', '$Equals', sems0),
+    Rule('$BinaryStringToBool', '$Compare', sems0),
     # ArgX may be treated as an object or a string (referring to its textual contents)
     Rule('$String', '$ArgX', lambda sems: ('.arg_to_string', sems[0])),
     Rule('$StringList', 'StringListOr', sems0),
@@ -109,9 +109,6 @@ unary_rules = [
     Rule('$List', '$StringList', sems0),
     Rule('$List', '$IntList', sems0),
     Rule('$List', '$TokenList', sems0),
-    # Rule('$List', '$POSList', sems0),
-    # Rule('$List', '$NERList', sems0),
-    # Rule('$List', '$CIDList', sems0),
     Rule('$ROOT', '$LF', lambda sems: ('.root', sems[0])),
 ]
 
@@ -165,6 +162,7 @@ compositional_rules = [
     Rule('$IntToBool', '$In $IntList', sems_in_order),
     Rule('$IntToBool', '$Contains $Int', sems_in_order),
     Rule('$IntToBool', '$Compare $Int', sems_in_order),
+    Rule('$NotEquals', '$Equals $Not', '.not_equals'), # necessary because not requires a bool, not an IntToBool
 
         # count
     Rule('$Int', '$Count $List', sems_in_order),
@@ -186,7 +184,7 @@ compositional_rules = [
     Rule('$StringList', '$TokenList', lambda sems: ('.field', sems[0], ('.string', 'words'))),
     Rule('$TokenList', '$Word $TokenList', lambda sems: ('.filter_words', sems[1], ('.string', 'words'))),
     Rule('$TokenList', '$POS $TokenList', lambda sems: ('.filter_attr', sems[1], ('.string', 'pos_tags'), sems[0])),
-    Rule('$TokenList', '$POS $TokenList', lambda sems: ('.filter_attr', sems[1], ('.string', 'ner_tags'), sems[0])),
+    Rule('$TokenList', '$NER $TokenList', lambda sems: ('.filter_attr', sems[1], ('.string', 'ner_tags'), sems[0])),
     # Rule('$NERList', '$NER $TokenList', lambda sems: ('.field', sems[1], '')),
 
     # Slices
@@ -247,6 +245,7 @@ snorkel_ops = {
     '.none': lambda x: lambda c: not any(xi==True for xi in x(c)),
     # comparisons
     '.equals': lambda x: lambda cx: lambda y: lambda cy: y(cy) == x(cx),
+    '.not_equals': lambda x: lambda cx: lambda y: lambda cy: y(cy) != x(cx),
     '.less': lambda x: lambda cx: lambda y: lambda cy: y(cy) < x(cx),
     '.atmost': lambda x: lambda cx: lambda y: lambda cy: y(cy) <= x(cx),
     '.more': lambda x: lambda cx: lambda y: lambda cy: y(cy) > x(cx),

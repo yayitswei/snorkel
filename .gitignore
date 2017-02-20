@@ -16,6 +16,9 @@ docs/_build
 # PyCharm
 .idea
 
+# conda
+environment.yml
+
 # TF models
 *.info
 *.meta

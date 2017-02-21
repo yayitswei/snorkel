@@ -4,10 +4,6 @@ from snorkel.candidates import Ngrams, CandidateExtractor, PretaggedCandidateExt
 from snorkel.matchers import PersonMatcher
 from snorkel.annotations import FeatureAnnotator, LabelAnnotator
 
-from utils import TaggerOneTagger
-from load_external_annotations import load_external_labels
-from cdr_lfs import get_cdr_lfs
-
 import os
 import csv
 import cPickle
@@ -40,6 +36,12 @@ class SnorkelModel(object):
         raise NotImplementedError
 
 class CDRModel(SnorkelModel):
+    def __init__(self, session, parallelism=1, seed=0, verbose=True):
+        from utils import TaggerOneTagger
+        from load_external_annotations import load_external_labels
+        from cdr_lfs import get_cdr_lfs
+        SnorkelModel.init(self, session, parallelism, seed, verbose)
+
     def parse(self, file_path='data/CDR.BioC.xml', max_docs=float('inf'), clear=True):
         doc_preprocessor = XMLMultiDocPreprocessor(
             path=file_path,
@@ -104,11 +106,12 @@ class CDRModel(SnorkelModel):
         if self.verbose:
             return L_train.lf_stats(self.session)
 
-
+### NOTE: THIS IS LIKELY BROKEN
 class SpouseModel(SnorkelModel):
     def parse(self, file_path, max_docs=float('inf'), clear=True):
         doc_preprocessor = TSVDocPreprocessor(file_path, max_docs=max_docs)
         SnorkelModel.parse(self, doc_preprocessor, clear=clear)
+        self.dev_path = file_path
         # doc_preprocessor = TSVDocPreprocessor(dev_path, max_docs=max_dev)
         # SnorkelModel.parse(self, doc_preprocessor, clear=False)
         # if self.verbose:
@@ -136,7 +139,7 @@ class SpouseModel(SnorkelModel):
             self.dev_path = 'data/articles_dev.tsv'
             # TEMP
             dev_doc_names = set()
-            with open(os.environ['SNORKELHOME'] + '/tutorials/semparse/{}'.format(self.dev_path)) as csvin:
+            with open(self.dev_path) as csvin:
                 reader = csv.reader(csvin, delimiter='\t')
                 for row in reader:
                     doc, _ = row
@@ -145,11 +148,11 @@ class SpouseModel(SnorkelModel):
 
         Spouse = candidate_subclass('Spouse', ['person1', 'person2'])
         ngrams         = Ngrams(n_max=3)
-        # person_matcher = PersonMatcher(longest_match_only=True)
-        # cand_extractor = CandidateExtractor(Spouse, 
-        #                                     [ngrams, ngrams], 
-        #                                     [person_matcher, person_matcher],
-        #                                     symmetric_relations=False)
+        person_matcher = PersonMatcher(longest_match_only=True)
+        cand_extractor = CandidateExtractor(Spouse, 
+                                            [ngrams, ngrams], 
+                                            [person_matcher, person_matcher],
+                                            symmetric_relations=False)
         
         dev_doc_names = get_dev_doc_names()
         docs = self.session.query(Document).order_by(Document.name).all()

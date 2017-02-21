@@ -24,7 +24,7 @@ lexical_rules = [
     # logic
     Rule('$And', 'and', '.and'),
     Rule('$All', 'all', '.all'),
-    Rule('$IntToBool', 'a', ('.atleast', ('.int', 1))),
+    Rule('$AtLeastOne', 'a', ('.atleast', ('.int', 1))),
     Rule('$Int', 'a', ('.int', 1)),
     Rule('$Int', 'no', ('.int', 0)),
     # direction
@@ -101,6 +101,7 @@ unary_rules = [
     Rule('$BinaryStringToBool', '$In', sems0),
     Rule('$BinaryStringToBool', '$Contains', sems0),
     Rule('$BinaryStringToBool', '$Compare', sems0),
+    Rule('$IntToBool', '$AtLeastOne', sems0),
     # ArgX may be treated as an object or a string (referring to its textual contents)
     Rule('$String', '$ArgX', lambda sems: ('.arg_to_string', sems[0])),
     Rule('$StringList', 'StringListOr', sems0),
@@ -149,6 +150,7 @@ compositional_rules = [
     Rule('$StringToBool', '$BinaryStringToBool $String', lambda sems: (sems[0], sems[1])),
     Rule('$StringToBool', '$BinaryStringToBool $StringListAnd', lambda sems: ('.composite_and', (sems[0],), sems[1])),
     Rule('$StringToBool', '$BinaryStringToBool $StringListOr', lambda sems:  ('.composite_or',  (sems[0],), sems[1])),
+    Rule('$StringToBool', '$BinaryStringToBool $UserList', lambda sems:  ('.composite_or',  (sems[0],), sems[1])),
     Rule('$StringToBool', '$In $StringList', sems_in_order),
     
     # Integers
@@ -166,12 +168,15 @@ compositional_rules = [
 
         # count
     Rule('$Int', '$Count $List', sems_in_order),
-    Rule('$Bool', '$IntToBool $List', lambda sems: ('.call', sems[0], ('.count', sems[1]))), # There are at least two nouns to the left...
+            # There are at least two nouns to the left...
+    Rule('$Bool', '$IntToBool $List', lambda sems: ('.call', sems[0], ('.count', sems[1]))), 
     # Rule('$Bool', '$Exists $Int $List', lambda sems: ('.call', ('.equals', sems[1]), ('.count', sems[2]))), # There are three nouns to the left...
+            # At least one noun is to the left...
     Rule('$Bool', '$IntToBool $POS $Exists $TokenList', lambda sems: 
-        ('.call', sems[0], ('.count', ('.filter_attr', sems[3], ('.string', 'pos_tags'), sems[1])))), # At least one noun is to the left...
+        ('.call', sems[0], ('.count', ('.filter_attr', sems[3], ('.string', 'pos_tags'), sems[1])))),
+            # At least one person is to the left...
     Rule('$Bool', '$IntToBool $NER $Exists $TokenList', lambda sems: 
-        ('.call', sems[0], ('.count', ('.filter_attr', sems[3], ('.string', 'ner_tags'), sems[1])))), # At least one noun is to the left...
+        ('.call', sems[0], ('.count', ('.filter_attr', sems[3], ('.string', 'ner_tags'), sems[1])))), 
     # Rule('$Bool', '$Exists $List', lambda sems: ('.call', ('.atleast', ('.int', 1)), ('.count', sems[1]))),
     
     # Context
@@ -185,7 +190,6 @@ compositional_rules = [
     Rule('$TokenList', '$Word $TokenList', lambda sems: ('.filter_words', sems[1], ('.string', 'words'))),
     Rule('$TokenList', '$POS $TokenList', lambda sems: ('.filter_attr', sems[1], ('.string', 'pos_tags'), sems[0])),
     Rule('$TokenList', '$NER $TokenList', lambda sems: ('.filter_attr', sems[1], ('.string', 'ner_tags'), sems[0])),
-    # Rule('$NERList', '$NER $TokenList', lambda sems: ('.field', sems[1], '')),
 
     # Slices
     # TODO: Test these more thoroughly

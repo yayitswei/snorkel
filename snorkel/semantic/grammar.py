@@ -46,17 +46,24 @@ class Grammar(object):
         chart = defaultdict(list)
         for j in range(1, len(tokens) + 1):
             for i in range(j - 1, -1, -1):
-                self.apply_user_lists(chart, tokens, i, j)
-                self.apply_annotators(chart, tokens, i, j)
-                self.apply_lexical_rules(chart, words, i, j)
-                self.apply_binary_rules(chart, i, j)
-                self.apply_unary_rules(chart, i, j)
+                self.apply_user_lists(chart, words, i, j) # words[i:j] is the name of a UserList?
+                self.apply_annotators(chart, tokens, i, j) # tokens[i:j] should be tagged?
+                self.apply_lexical_rules(chart, words, i, j) # words[i:j] matches lexical rule?
+                self.apply_binary_rules(chart, i, j) # any split of words[i:j] matches binary rule?
+                self.apply_unary_rules(chart, i, j) # add additional tags if chart[(i,j)] matches unary rule
+                # TEMP
+                # for parse in chart[(i,j)]:
+                #     if '.atleast' in str(parse.semantics):
+                #         print(parse)
+                #         print(parse.semantics)
+                #         import pdb; pdb.set_trace()
+                # TEMP
         parses = chart[(0, len(tokens))]
         if self.start_symbol:
             parses = [parse for parse in parses if parse.rule.lhs == self.start_symbol]
         self.chart = chart
         if len(parses) == 0:
-            self.print_chart(nested=False, words=words)
+            self.print_chart(nested=False)
             import pdb; pdb.set_trace()
         return parses
 
@@ -152,10 +159,9 @@ class Grammar(object):
         self.add_rule(Rule(rule.lhs, (rule.rhs[0], category),
                             lambda sems: rule.apply_semantics([sems[0]] + sems[1])))
 
-    def apply_user_lists(self, chart, tokens, i, j):
+    def apply_user_lists(self, chart, words, i, j):
         """Add parses to chart cell (i, j) by applying user lists."""
         if self.user_lists:
-            words = [t['word'] for t in tokens]
             key = ' '.join(words[i:j])
             if key in self.user_lists:
                 lhs = '$UserList'
@@ -331,7 +337,6 @@ class Parse:
         self.rule = rule
         self.children = tuple(children[:])
         self.semantics = self.compute_semantics()
-        self.function = None
         self.validate_parse()
 
     def __eq__(self, other):

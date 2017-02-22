@@ -129,6 +129,7 @@ compositional_rules = [
     Rule('$StringStub', '$Quote $QueryToken', lambda sems: [sems[1]]),
     Rule('$StringStub', '$StringStub $QueryToken', lambda sems: sems[0] + [sems[1]]),
     Rule('$String', '$StringStub $Quote', lambda sems: ('.string', ' '.join(sems[0]))),
+    Rule('$String', '$Word $String', sems1),
 
         # building string lists (TODO: remove some redundancies here?)
     Rule('$StringList', '$String ?$Separator $String', lambda sems: ('.list', sems[0], sems[2])),
@@ -137,7 +138,7 @@ compositional_rules = [
     Rule('$StringListOr', '$String ?$Separator $Or $String', lambda sems: ('.list', sems[0], sems[3])),
     Rule('$StringListOr', '$StringList ?$Separator $Or $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
 
-    Rule('$StringListOr', '$String ?$Separator $And  $String', lambda sems: ('.list', sems[0], sems[3])),
+    Rule('$StringListAnd', '$String ?$Separator $And $String', lambda sems: ('.list', sems[0], sems[3])),
     Rule('$StringListAnd', '$StringList ?$Separator $And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
 
         # applying $StringToBool functions
@@ -154,18 +155,29 @@ compositional_rules = [
     Rule('$StringToBool', '$BinaryStringToBool $UserList', lambda sems:  ('.composite_or',  (sems[0],), sems[1])),
     Rule('$StringToBool', '$In $StringList', sems_in_order),
     
+        # absorb redundancy
+    Rule('$UserList', '$UserList $Word', sems0),
+    Rule('$UserList', '$Word $UserList', sems1),
+
     # Integers
         # applying $IntoToBool functions
     Rule('$Bool', '$Int $IntToBool', lambda sems: ('.call', sems[1], sems[0])),
     Rule('$BoolList', '$IntList $IntToBool', lambda sems: ('.map', sems[1], sems[0])),
     
-        # "more than five of X words are upper"
-    Rule('$Bool', '$Compare $Int $BoolList', lambda sems: ('.call', (sems[0], sems[1]), ('.sum', sems[2]))),
-
     Rule('$IntToBool', '$In $IntList', sems_in_order),
     Rule('$IntToBool', '$Contains $Int', sems_in_order),
     Rule('$IntToBool', '$Compare $Int', sems_in_order),
-    Rule('$NotEquals', '$Equals $Not', '.not_equals'), # necessary because 'not' requires a bool, not an IntToBool
+    Rule('$NotEquals', '$Equals $Not', '.notequals'), # necessary because 'not' requires a bool, not an IntToBool
+
+        # flipping inequalities
+    Rule('$AtMost', '$Not $MoreThan', '.atmost'),
+    Rule('$LessThan', '$Not $AtLeast', '.less'),
+    Rule('$AtLeast', '$Not $LessThan', '.atleast'),
+    Rule('$MoreThan', '$Not $AtMost', '.more'),
+    Rule('$NotEquals', '$Not $Equals', '.notequals'),
+
+        # "more than five of X words are upper"
+    Rule('$Bool', '$Compare $Int $BoolList', lambda sems: ('.call', (sems[0], sems[1]), ('.sum', sems[2]))),
 
         # indices
             # "is left of (the word) Y"
@@ -185,7 +197,7 @@ compositional_rules = [
     Rule('$Bool', '$IntToBool $NER $Exists $TokenList', lambda sems: 
         ('.call', sems[0], ('.count', ('.filter_attr', sems[3], ('.string', 'ner_tags'), sems[1])))), 
             # "there are not three people to the left..."
-    Rule('$Bool', '$Exists $Not $Int $List', lambda sems: ('.call', ('.not_equals', sems[2]), ('.count', sems[3]))), 
+    Rule('$Bool', '$Exists $Not $Int $List', lambda sems: ('.call', ('.notequals', sems[2]), ('.count', sems[3]))), 
             # "there are three nouns to the left..."
     Rule('$Bool', '$Exists $Int $List', lambda sems: ('.call', ('.equals', sems[1]), ('.count', sems[2]))), 
             # "there are at least two nouns to the left..."
@@ -199,6 +211,7 @@ compositional_rules = [
     Rule('$TokenList', '$Sentence', lambda sems: (sems[0],)),
     
     Rule('$StringList', '$TokenList', lambda sems: ('.field', sems[0], ('.string', 'words'))),
+    Rule('$TokenList', '$TokenList $Word', lambda sems: ('.filter_words', sems[0], ('.string', 'words'))),
     Rule('$TokenList', '$Word $TokenList', lambda sems: ('.filter_words', sems[1], ('.string', 'words'))),
     Rule('$TokenList', '$POS $TokenList', lambda sems: ('.filter_attr', sems[1], ('.string', 'pos_tags'), sems[0])),
     Rule('$TokenList', '$NER $TokenList', lambda sems: ('.filter_attr', sems[1], ('.string', 'ner_tags'), sems[0])),
@@ -261,7 +274,7 @@ snorkel_ops = {
     '.none': lambda x: lambda c: not any(xi==True for xi in x(c)),
     # comparisons
     '.equals': lambda x: lambda cx: lambda y: lambda cy: y(cy) == x(cx),
-    '.not_equals': lambda x: lambda cx: lambda y: lambda cy: y(cy) != x(cx),
+    '.notequals': lambda x: lambda cx: lambda y: lambda cy: y(cy) != x(cx),
     '.less': lambda x: lambda cx: lambda y: lambda cy: y(cy) < x(cx),
     '.atmost': lambda x: lambda cx: lambda y: lambda cy: y(cy) <= x(cx),
     '.more': lambda x: lambda cx: lambda y: lambda cy: y(cy) > x(cx),

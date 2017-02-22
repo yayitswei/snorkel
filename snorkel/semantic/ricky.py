@@ -24,8 +24,8 @@ lexical_rules = [
     # logic
     Rule('$And', 'and', '.and'),
     Rule('$All', 'all', '.all'),
-    Rule('$AtLeastOne', 'a', ('.atleast', ('.int', 1))),
-    Rule('$Int', 'a', ('.int', 1)),
+    # Rule('$AtLeastOne', 'a', ('.atleast', ('.int', 1))),
+    # Rule('$Int', 'a', ('.int', 1)),
     Rule('$Int', 'no', ('.int', 0)),
     Rule('$Int', 'immediately', ('.int', 1)),
     # direction
@@ -42,17 +42,17 @@ lexical_rules.extend(
     [Rule('$Any', w, '.any') for w in ['any', 'a']] +
     [Rule('$Not', w, '.not') for w in ['not', "n't"]] +
     [Rule('$None', w, '.none') for w in ['none', 'not any', 'neither', 'no']] +
-    [Rule('$Is', w) for w in ['is', 'are', 'be']] +
+    # [Rule('$Is', w) for w in ['is', 'are', 'be']] +
     [Rule('$Because', w) for w in ['because', 'since', 'if']] +
     [Rule('$Upper', w, '.upper') for w in ['upper', 'uppercase', 'upper case', 'all caps', 'all capitalized']] +
     [Rule('$Lower', w, '.lower') for w in ['lower', 'lowercase', 'lower case']] +
     [Rule('$Capital', w, '.capital') for w in ['capital', 'capitals', 'capitalized']] +
-    [Rule('$Equals', w, '.equals') for w in ['equal', 'equals', '=', '==', 'same ?as', 'identical']] + 
+    [Rule('$Equals', w, '.equals') for w in ['equal', 'equals', '=', '==', 'same', 'identical']] + 
     [Rule('$LessThan', w, '.less') for w in ['less than', 'smaller than', '<']] +
     [Rule('$AtMost', w, '.atmost') for w in ['at most', 'no larger than', 'less than or equal', 'within', 'no more than', '<=']] +
     [Rule('$MoreThan', w, '.more') for w in ['more than', 'greater than', 'larger than', '>']] + 
     [Rule('$AtLeast', w, '.atleast') for w in ['at least', 'no less than', 'no smaller than', 'greater than or equal', '>=']] +
-    [Rule('$Exists', w) for w in ['exist', 'exists']] +
+    [Rule('$Exists', w) for w in ['exist', 'exists', 'there']] +
     [Rule('$Contains', w, '.contains') for w in ['contains', 'contain']] +
     [Rule('$StartsWith', w, '.startswith') for w in ['starts with', 'start with']] +
     [Rule('$EndsWith', w, '.endswith') for w in ['ends with', 'end with']] +
@@ -77,8 +77,8 @@ unary_rules = [
     Rule('$BoolLit', '$False', sems0),
     Rule('$Conj', '$And', sems0),
     Rule('$Conj', '$Or', sems0),
-    Rule('$Exists', '$Is'),
-    Rule('$Equals', '$Is', '.equals'),
+    # Rule('$Exists', '$Is'),
+    # Rule('$Equals', '$Is', '.equals'),
     Rule('$Compare', '$Equals', sems0),
     Rule('$Compare', '$NotEquals', sems0),
     Rule('$Compare', '$LessThan', sems0),
@@ -169,8 +169,8 @@ compositional_rules = [
 
         # indices
             # "is left of (the word) Y"
-    Rule('$IntToBool', '$Direction ?$Word $Token', lambda sems: TBD,
-    Rule('$IntToBool', '$Direction ?$Word $Token', lambda sems: TBD,
+    # Rule('$IntToBool', '$Direction ?$Word $Token', lambda sems: TBD,
+    # Rule('$IntToBool', '$Direction ?$Word $Token', lambda sems: TBD,
     
 
     # DEPRECATED:

@@ -108,7 +108,7 @@ test_examples = [
         denotation=1),
     # Candidate as string
     Example(
-        explanation="label True because argument 1 is 'foo'",
+        explanation="label True because argument 1 equals 'foo'",
         candidate=('foo', 'bar'),
         denotation=1),
     # In
@@ -123,7 +123,7 @@ test_examples = [
         denotation=1),
     # List
     Example(
-        explanation="label True because arg 2 is 'foo', 'bar', or 'baz'",
+        explanation="label True because arg 2 equals 'foo', 'bar', or 'baz'",
         candidate=('foo', 'bar'),
         denotation=1),
     # UserList
@@ -163,7 +163,7 @@ test_examples = [
         denotation=1),    
     # Between words (list)
     Example(
-        explanation="label True because 'wife' is between arg 1 and arg 2",
+        explanation="label True because 'wife' is in the words between arg 1 and arg 2",
         candidate=-3658950303959694808,
         denotation=1),    
     # Sentence (list)
@@ -183,14 +183,14 @@ test_examples = [
     ####
     # Tokens
     Example(
-        explanation="label True because a word to the left of arg 1 is lower case",
+        explanation="label True because at least one word to the left of arg 1 is lower case",
         candidate=-3658950303959694808,
         denotation=1),    
-    # POS
-    Example(
-        explanation="label True because a noun is between arg 1 and arg 2",
-        candidate=-3658950303959694808,
-        denotation=1),
+    # # POS
+    # Example(
+    #     explanation="label True because a noun is between arg 1 and arg 2",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
     # NER
     Example(
         explanation="label True because there are no people between arg 1 and arg 2",
@@ -211,11 +211,11 @@ test_examples = [
         explanation="label True because there are more than 3 words between arg 1 and arg 2",
         candidate=-3658950303959694808,
         denotation=1),
-    # Count3
-    Example(
-        explanation="label True because a word is between arg 1 and arg 2",
-        candidate=-3658950303959694808,
-        denotation=1),
+    # # Count3
+    # Example(
+    #     explanation="label True because a word is between arg 1 and arg 2",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
     # Count4
     Example(
         explanation="label True because there are two nouns to the left of arg 1",

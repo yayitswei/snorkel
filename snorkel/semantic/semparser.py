@@ -14,6 +14,14 @@ class SemanticParser():
                                annotators=annotators,
                                absorb=absorb)
 
+    def preprocess(self, explanations):
+        stopwords = (['is', 'are', 'be',
+                      'a', 'the', 
+                      'to', 'of', 'from'])
+        for explanation in explanations:
+            words = explanation.split()
+            yield ' '.join([w for w in words if w not in stopwords])
+
     def parse(self, explanations, candidates=None, verbose=False, return_parses=False):
         """
         Accepts natural language explanations and returns parses
@@ -21,7 +29,7 @@ class SemanticParser():
         LFs = []
         parses = []
         explanations = explanations if isinstance(explanations, list) else [explanations]
-        for i, exp in enumerate(explanations):
+        for i, exp in enumerate(self.preprocess(explanations)):
             exp_parses = self.grammar.parse_input(exp)
             for j, parse in enumerate(exp_parses):
                 # print(parse.semantics)

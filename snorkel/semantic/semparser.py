@@ -19,6 +19,7 @@ class SemanticParser():
                       'a', 'the', 
                       'to', 'of', 'from'])
         for explanation in explanations:
+            explanation = explanation.replace("'", '"')
             words = explanation.split()
             yield ' '.join([w for w in words if w not in stopwords])
 

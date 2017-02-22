@@ -51,13 +51,6 @@ class Grammar(object):
                 self.apply_lexical_rules(chart, words, i, j) # words[i:j] matches lexical rule?
                 self.apply_binary_rules(chart, i, j) # any split of words[i:j] matches binary rule?
                 self.apply_unary_rules(chart, i, j) # add additional tags if chart[(i,j)] matches unary rule
-                # TEMP
-                # for parse in chart[(i,j)]:
-                #     if '.atleast' in str(parse.semantics):
-                #         print(parse)
-                #         print(parse.semantics)
-                #         import pdb; pdb.set_trace()
-                # TEMP
         parses = chart[(0, len(tokens))]
         if self.start_symbol:
             parses = [parse for parse in parses if parse.rule.lhs == self.start_symbol]

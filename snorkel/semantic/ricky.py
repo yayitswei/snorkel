@@ -27,6 +27,7 @@ lexical_rules = [
     Rule('$AtLeastOne', 'a', ('.atleast', ('.int', 1))),
     Rule('$Int', 'a', ('.int', 1)),
     Rule('$Int', 'no', ('.int', 0)),
+    Rule('$Int', 'immediately', ('.int', 1)),
     # direction
     Rule('$Sentence', '?in ?the sentence', '.sentence_tokens'),
     # other
@@ -158,26 +159,37 @@ compositional_rules = [
     Rule('$Bool', '$Int $IntToBool', lambda sems: ('.call', sems[1], sems[0])),
     Rule('$BoolList', '$IntList $IntToBool', lambda sems: ('.map', sems[1], sems[0])),
     
-    # e.g., more than five of X words are upper
+        # "more than five of X words are upper"
     Rule('$Bool', '$Compare $Int $BoolList', lambda sems: ('.call', (sems[0], sems[1]), ('.sum', sems[2]))),
 
     Rule('$IntToBool', '$In $IntList', sems_in_order),
     Rule('$IntToBool', '$Contains $Int', sems_in_order),
     Rule('$IntToBool', '$Compare $Int', sems_in_order),
-    Rule('$NotEquals', '$Equals $Not', '.not_equals'), # necessary because not requires a bool, not an IntToBool
+    Rule('$NotEquals', '$Equals $Not', '.not_equals'), # necessary because 'not' requires a bool, not an IntToBool
 
+        # indices
+            # "is left of (the word) Y"
+    Rule('$IntToBool', '$Direction ?$Word $Token', lambda sems: TBD,
+    Rule('$IntToBool', '$Direction ?$Word $Token', lambda sems: TBD,
+    
+
+    # DEPRECATED:
+    # Rule('$Bool', '$IntToBool $List', lambda sems: ('.call', sems[0], ('.count', sems[1]))), 
+        
         # count
     Rule('$Int', '$Count $List', sems_in_order),
-            # There are at least two nouns to the left...
-    Rule('$Bool', '$IntToBool $List', lambda sems: ('.call', sems[0], ('.count', sems[1]))), 
-    # Rule('$Bool', '$Exists $Int $List', lambda sems: ('.call', ('.equals', sems[1]), ('.count', sems[2]))), # There are three nouns to the left...
-            # At least one noun is to the left...
+            # "at least one noun is to the left..."
     Rule('$Bool', '$IntToBool $POS $Exists $TokenList', lambda sems: 
         ('.call', sems[0], ('.count', ('.filter_attr', sems[3], ('.string', 'pos_tags'), sems[1])))),
-            # At least one person is to the left...
+            # "at least one person is to the left..."
     Rule('$Bool', '$IntToBool $NER $Exists $TokenList', lambda sems: 
         ('.call', sems[0], ('.count', ('.filter_attr', sems[3], ('.string', 'ner_tags'), sems[1])))), 
-    # Rule('$Bool', '$Exists $List', lambda sems: ('.call', ('.atleast', ('.int', 1)), ('.count', sems[1]))),
+            # "there are not three people to the left..."
+    Rule('$Bool', '$Exists $Not $Int $List', lambda sems: ('.call', ('.not_equals', sems[2]), ('.count', sems[3]))), 
+            # "there are three nouns to the left..."
+    Rule('$Bool', '$Exists $Int $List', lambda sems: ('.call', ('.equals', sems[1]), ('.count', sems[2]))), 
+            # "there are at least two nouns to the left..."
+    Rule('$Bool', '$Exists $IntToBool $List', lambda sems: ('.call', sems[1], ('.count', sems[2]))),
     
     # Context
     Rule('$ArgX', '$Arg $Int', sems_in_order),

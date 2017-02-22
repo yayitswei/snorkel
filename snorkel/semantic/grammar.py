@@ -26,11 +26,11 @@ class Grammar(object):
         self.corenlp = CoreNLPHandler()
         for rule in rules:
             self.add_rule(rule)
-        for annotator in annotators:
-            for rule in annotator.rules:
-                self.add_rule(rule)
-        if user_lists:
-            self.add_rule(Rule('$UserList', ('$UserList', '$QueryToken'), lambda sems: sems[0]))
+        # for annotator in annotators:
+        #     for rule in annotator.rules:
+        #         self.add_rule(rule)
+        # if user_lists:
+        #     self.add_rule(Rule('$UserList', ('$UserList', '$QueryToken'), lambda sems: sems[0]))
         print('Created grammar with %d rules' % \
             (len(self.lexical_rules) + len(self.unary_rules) + len(self.binary_rules)))
 
@@ -65,8 +65,8 @@ class Grammar(object):
             self.add_rule_containing_optional(rule)
         elif rule.is_lexical():
             self.lexical_rules[rule.rhs].append(rule)
-            if self.absorb:
-                self.add_absorption_rule(rule)
+            # if self.absorb:
+            #     self.add_absorption_rule(rule)
         elif rule.is_unary():
             self.unary_rules[rule.rhs].append(rule)
         elif rule.is_binary():
@@ -112,12 +112,12 @@ class Grammar(object):
             sem = lambda sems: rule.sem(sems[:first] + [None] + sems[first:])
         self.add_rule(Rule(rule.lhs, prefix + suffix, sem))
 
-    def add_absorption_rule(self, rule):
-        lhs = rule.lhs
-        rhs = (rule.lhs, '$QueryToken')
-        new_rule = Rule(lhs, rhs, rule.sem)
-        if new_rule not in self.binary_rules[new_rule.rhs]:
-            self.binary_rules[new_rule.rhs].append(new_rule)
+    # def add_absorption_rule(self, rule):
+    #     lhs = rule.lhs
+    #     rhs = (rule.lhs, '$QueryToken')
+    #     new_rule = Rule(lhs, rhs, rule.sem)
+    #     if new_rule not in self.binary_rules[new_rule.rhs]:
+    #         self.binary_rules[new_rule.rhs].append(new_rule)
 
     def add_n_ary_rule(self, rule):
         """

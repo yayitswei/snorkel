@@ -13,10 +13,11 @@ class Annotator:
     
     def make_rules(self):
         """Returns a list of lexical rules"""
-        rules = []
-        for lhs in self.categories:
-            rules.append(Rule(lhs, (lhs, '$QueryToken'), lambda sems: sems[0]))
-        return rules
+        return NotImplementedError
+        # rules = []
+        # for lhs in self.categories:
+        #     rules.append(Rule(lhs, (lhs, '$QueryToken'), lambda sems: sems[0]))
+        # return rules
 
 class TokenAnnotator(Annotator):
     def __init__(self):

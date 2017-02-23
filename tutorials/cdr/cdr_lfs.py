@@ -57,7 +57,7 @@ def get_cdr_lfs():
     causal_past = ['induced', 'caused', 'due']
     def LF_d_induced_by_c(c):
         """
-        Label True because 'induced', 'caused', or 'due' and 'by' or 'to' are between the disease and the chemical.
+        Label True because ('induced', 'caused', or 'due') and ('by' or 'to') are between the disease and the chemical.
         """
         return rule_regex_search_btw_BA(c, '.{0,50}' + ltp(causal_past) + '.{0,9}(by|to).{0,50}', 1)
 
@@ -92,7 +92,7 @@ def get_cdr_lfs():
 
     def LF_c_d(c):
         """
-        Label true because the chemical is immediately followed by the disease
+        Label true because the disease is immediately after the chemical
         """
         return 1 if ('{{A}} {{B}}' in get_tagged_text(c)) else 0
 
@@ -121,7 +121,7 @@ def get_cdr_lfs():
 
     def LF_induced_other(c):
         """
-        DONE: Label false if a word between the chemical and the disease ends with '-induced'
+        DONE: Label false if any word between the chemical and the disease ends with '-induced'
         """
         return rule_regex_search_tagged_text(c, '{{A}}.{20,1000}-induced {{B}}', -1)
 

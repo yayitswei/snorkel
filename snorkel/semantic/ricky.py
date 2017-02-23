@@ -29,7 +29,7 @@ lexical_rules = [
     Rule('$Int', 'no', ('.int', 0)),
     Rule('$Int', 'immediately', ('.int', 1)),
     # direction
-    Rule('$Sentence', '?in ?the sentence', '.sentence_tokens'),
+    Rule('$Sentence', '?in ?the sentence', '.sentence'),
     # other
     Rule('$In', 'in', '.in'),
     Rule('$Label', 'label ?it', '.label'),
@@ -47,18 +47,19 @@ lexical_rules.extend(
     [Rule('$Upper', w, '.upper') for w in ['upper', 'uppercase', 'upper case', 'all caps', 'all capitalized']] +
     [Rule('$Lower', w, '.lower') for w in ['lower', 'lowercase', 'lower case']] +
     [Rule('$Capital', w, '.capital') for w in ['capital', 'capitals', 'capitalized']] +
-    [Rule('$Equals', w, '.equals') for w in ['equal', 'equals', '=', '==', 'same', 'identical']] + 
+    [Rule('$Equals', w, '.equals') for w in ['equal', 'equals', '=', '==', 'same', 'identical', 'exactly']] + 
     [Rule('$LessThan', w, '.less') for w in ['less than', 'smaller than', '<']] +
     [Rule('$AtMost', w, '.atmost') for w in ['at most', 'no larger than', 'less than or equal', 'within', 'no more than', '<=']] +
     [Rule('$MoreThan', w, '.more') for w in ['more than', 'greater than', 'larger than', '>']] + 
     [Rule('$AtLeast', w, '.atleast') for w in ['at least', 'no less than', 'no smaller than', 'greater than or equal', '>=']] +
+    [Rule('$Within', w, '.within') for w in ['within']] +
     [Rule('$Exists', w) for w in ['exist', 'exists', 'there']] +
     [Rule('$Contains', w, '.contains') for w in ['contains', 'contain']] +
     [Rule('$StartsWith', w, '.startswith') for w in ['starts with', 'start with']] +
     [Rule('$EndsWith', w, '.endswith') for w in ['ends with', 'end with']] +
-    [Rule('$Left', w, '.left_tokens') for w in ['left', 'before', 'precedes', 'preceding']] +
-    [Rule('$Right', w, '.right_tokens') for w in ['right', 'after', 'follows', 'following']] +
-    [Rule('$Between', w, '.between_tokens') for w in ['between', 'inbetween']] +
+    [Rule('$Left', w, '.left') for w in ['left', 'before', 'precedes', 'preceding']] +
+    [Rule('$Right', w, '.right') for w in ['right', 'after', 'follows', 'following']] +
+    [Rule('$Between', w, '.between') for w in ['between', 'inbetween']] +
     [Rule('$Separator', w) for w in [',', ';', '/']] +
     [Rule('$Count', w, '.count') for w in ['number', 'length', 'count']] +
     [Rule('$Word', w) for w in ['word', 'words', 'term']] + 
@@ -85,6 +86,8 @@ unary_rules = [
     Rule('$Compare', '$AtMost', sems0),
     Rule('$Compare', '$MoreThan', sems0),
     Rule('$Compare', '$AtLeast', sems0),
+    Rule('$WithIO', '$Within', sems0),
+    Rule('$WithIO', '$Without', sems0),
     Rule('$Direction', '$Left', sems0),
     Rule('$Direction', '$Right', sems0),
     Rule('$POS', '$NounPOS', sems0),
@@ -143,31 +146,30 @@ compositional_rules = [
 
         # applying $StringToBool functions
     Rule('$Bool', '$String $StringToBool', lambda sems: ('.call', sems[1], sems[0])),
-    Rule('$Bool', '$StringListOr $StringToBool', lambda sems: ('.or', ('.map', sems[1], sems[0]))),
-    Rule('$Bool', '$StringListAnd $StringToBool', lambda sems: ('.and', ('.map', sems[1], sems[0]))),
+    Rule('$Bool', '$StringListOr $StringToBool', lambda sems: ('.any', ('.map', sems[1], sems[0]))),
+    Rule('$Bool', '$StringListAnd $StringToBool', lambda sems: ('.all', ('.map', sems[1], sems[0]))),
     Rule('$BoolList', '$StringList $StringToBool', lambda sems: ('.map', sems[1], sems[0])),
 
         # defining $StringToBool functions
     Rule('$StringToBool', '$UnaryStringToBool', lambda sems: (sems[0],)),
-    Rule('$StringToBool', '$BinaryStringToBool $String', lambda sems: (sems[0], sems[1])),
-    Rule('$StringToBool', '$BinaryStringToBool $StringListAnd', lambda sems: ('.composite_and', (sems[0],), sems[1])),
-    Rule('$StringToBool', '$BinaryStringToBool $StringListOr', lambda sems:  ('.composite_or',  (sems[0],), sems[1])),
-    Rule('$StringToBool', '$BinaryStringToBool $UserList', lambda sems:  ('.composite_or',  (sems[0],), sems[1])),
+    Rule('$StringToBool', '$BinaryStringToBool $String', sems_in_order),
     Rule('$StringToBool', '$In $StringList', sems_in_order),
+    Rule('$StringToBool', '$BinaryStringToBool $StringListAnd', lambda sems: ('.composite_and', (sems[0],), sems[1])),
+    Rule('$StringToBool', '$BinaryStringToBool $StringListOr', lambda sems: ('.composite_or',  (sems[0],), sems[1])),
+    Rule('$StringToBool', '$BinaryStringToBool $UserList', lambda sems: ('.composite_or',  (sems[0],), sems[1])),
     
         # absorb redundancy
     Rule('$UserList', '$UserList $Word', sems0),
     Rule('$UserList', '$Word $UserList', sems1),
 
+        # intersection
+    Rule('$List', '$List $In $List', lambda (list1, in_, list2): ('.intersection', list1, list2)),
+
     # Integers
         # applying $IntoToBool functions
     Rule('$Bool', '$Int $IntToBool', lambda sems: ('.call', sems[1], sems[0])),
     Rule('$BoolList', '$IntList $IntToBool', lambda sems: ('.map', sems[1], sems[0])),
-    
-    Rule('$IntToBool', '$In $IntList', sems_in_order),
-    Rule('$IntToBool', '$Contains $Int', sems_in_order),
     Rule('$IntToBool', '$Compare $Int', sems_in_order),
-    Rule('$NotEquals', '$Equals $Not', '.notequals'), # necessary because 'not' requires a bool, not an IntToBool
 
         # flipping inequalities
     Rule('$AtMost', '$Not $MoreThan', '.atmost'),
@@ -175,20 +177,35 @@ compositional_rules = [
     Rule('$AtLeast', '$Not $LessThan', '.atleast'),
     Rule('$MoreThan', '$Not $AtMost', '.more'),
     Rule('$NotEquals', '$Not $Equals', '.notequals'),
-
-        # "more than five of X words are upper"
-    Rule('$Bool', '$Compare $Int $BoolList', lambda sems: ('.call', (sems[0], sems[1]), ('.sum', sems[2]))),
-
-        # indices
-            # "is left of (the word) Y"
-    # Rule('$IntToBool', '$Direction ?$Word $Token', lambda sems: TBD,
-    # Rule('$IntToBool', '$Direction ?$Word $Token', lambda sems: TBD,
+    Rule('$NotEquals', '$Equals $Not', '.notequals'), # necessary because 'not' requires a bool, not an IntToBool
+    Rule('$Without', '$Not $Within', '.without'), # necessary because 'not' requires a bool, not an IntToBool
     
+        # "more than five of X words are upper"
+    Rule('$Bool', '$IntToBool $BoolList', lambda (func_,boollist_): ('.call', func_, ('.sum', boollist_))),
+
+    # Indices
+    Rule('$Phrases', '$String', lambda (str_,): ('.str_to_phrases', str_)),
+    Rule('$Phrase', '$ArgX', lambda (arg_,): ('.arg_to_phrase', arg_)),
+    Rule('$Bool', '$Phrase $PhraseToBool', lambda (phr_, func_): ('.call', func_, phr_)),
+        # "is left of (the word) Y"
+    Rule('$PhraseToBool', '$Direction $Phrase', 
+        lambda (dir_, phr_): (dir_, ('.more',), ('.int', 0), phr_)),
+        # "is two words left of Y"
+    Rule('$PhraseToBool', '$Int ?$Word $Direction $Phrase', 
+        lambda (int_, word_, dir_, phr_): (dir_, ('.equals',), int_, phr_)),
+        # "is more than two words left of Y"
+    Rule('$PhraseToBool', '$Compare $Int ?$Word $Direction $Phrase', 
+        lambda (cmp_, int_, word_, dir_, phr_): (dir_, (cmp_,), int_, phr_)),
+        # "is within two words of Y"
+    Rule('$PhraseToBool', '$WithIO $Int ?$Word $Phrase', 
+        lambda (win_, int_, word_, phr_): (win_, int_, phr_)),
+        # "is between X and Y"
+    # Rule('$PhraseToBool', '$Compare $Int $Direction ?$Word $Phrase', lambda sems: TBD,
 
     # DEPRECATED:
     # Rule('$Bool', '$IntToBool $List', lambda sems: ('.call', sems[0], ('.count', sems[1]))), 
         
-        # count
+    # Count
     Rule('$Int', '$Count $List', sems_in_order),
             # "at least one noun is to the left..."
     Rule('$Bool', '$IntToBool $POS $Exists $TokenList', lambda sems: 
@@ -206,9 +223,9 @@ compositional_rules = [
     # Context
     Rule('$ArgX', '$Arg $Int', sems_in_order),
 
-    Rule('$TokenList', '$Direction $ArgX', sems_in_order),
-    Rule('$TokenList', '$Between $ArgX $And $ArgX', lambda sems: (sems[0], sems[1], sems[3])),
-    Rule('$TokenList', '$Sentence', lambda sems: (sems[0],)),
+    Rule('$TokenList', '$Direction $ArgX', lambda (dir_, arg): (dir_ + '_tokens', arg)),
+    Rule('$TokenList', '$Between $ArgX $And $ArgX', lambda sems: (sems[0] + '_tokens', sems[1], sems[3])),
+    Rule('$TokenList', '$Sentence', lambda sems: (sems[0] + '_tokens',)),
     
     Rule('$StringList', '$TokenList', lambda sems: ('.field', sems[0], ('.string', 'words'))),
     Rule('$TokenList', '$TokenList $Word', lambda sems: ('.filter_words', sems[0], ('.string', 'words'))),
@@ -261,12 +278,14 @@ snorkel_ops = {
     '.user_list': lambda x: lambda c: c['user_lists'][x(c)],
         # apply a function x to elements in list y
     '.map': lambda x, y: lambda cxy: [x(cxy)(lambda c: yi)(cxy) for yi in y(cxy)],
+        # call a 'hungry' evaluated function on one or more arguments
     '.call': lambda *x: lambda c: x[0](c)(x[1])(c), #TODO: extend to more than one argument?
         # apply an element to a list of functions (then call 'any' or 'all' to convert to boolean)
-    '.composite_and': lambda x, y: lambda cxy: lambda z: lambda cz: all([x(lambda c: yi)(cxy)(z(cz)) for yi in y(cxy)]), # apply
-    '.composite_or':  lambda x, y: lambda cxy: lambda z: lambda cz: any([x(lambda c: yi)(cxy)(z(cz)) for yi in y(cxy)]), # apply
+    '.composite_and': lambda x, y: lambda cxy: lambda z: lambda cz: all([x(lambda c: yi)(cxy)(z(cz)) for yi in y(cxy)]),
+    '.composite_or':  lambda x, y: lambda cxy: lambda z: lambda cz: any([x(lambda c: yi)(cxy)(z(cz)) for yi in y(cxy)]),
     # logic
-    '.and': lambda *x: lambda c: all(xi(c)==True for xi in x),
+        # NOTE: and/or expect individual inputs, not/all/any/none expect a single iterable of inputs
+    '.and': lambda *x: lambda c: all(xi(c)==True for xi in x), 
     '.or': lambda *x: lambda c: any(xi(c)==True for xi in x),
     '.not': lambda x: lambda c: not x(c),
     '.all': lambda x: lambda c: all(xi==True for xi in x(c)),
@@ -290,11 +309,29 @@ snorkel_ops = {
     '.contains': lambda x: lambda cx: lambda y: lambda cy: x(cx) in y(cy),
     '.count': lambda x: lambda c: len(x(c)),
     '.sum': lambda x: lambda c: sum(x(c)),
+    '.intersection': lambda x, y: lambda c: list(set(x(c)).intersection(y(c))),
         # '.index': lambda x, y: lambda c: x(c)[max(0, y(c) - 1)], # account for 0-indexing 
         # '.slice': lambda x, y, z: lambda c: x(c)[y(c):z(c)], 
         # '.merge': lambda x, y: lambda c: x(c) + y(c),
     # context
     '.arg': lambda x: lambda c: c['candidate'][x(c) - 1],
+    # indices
+    '.arg_to_phrase': lambda arg_: lambda c: c['lf_helpers']['get_phrase_from_span'](arg_(c)),
+    '.str_to_phrases': lambda str_: lambda c: c['lf_helpers']['get_phrases_from_text'](c['candidate'][0].get_parent(), str_(c)),
+    '.left': lambda cmp_, int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
+        getattr(lhs(clhs),'word_offsets')[0] < getattr(rhs(crhs),'word_offsets')[0] and # left condition
+        cmp_(lambda c: -(getattr(rhs(crhs),'word_offsets')[0]) + int_(clhs))(crhs)
+            (lambda c: -(getattr(lhs(clhs),'word_offsets')[0]))(clhs)),
+    '.right': lambda cmp_, int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
+        getattr(lhs(clhs),'word_offsets')[-1] > getattr(rhs(crhs),'word_offsets')[-1] and # right condition
+        cmp_(lambda c: getattr(rhs(crhs),'word_offsets')[-1] + int_(clhs))(crhs)
+        (lambda c: getattr(lhs(clhs),'word_offsets')[-1])(clhs)),
+    # '.between':
+    '.within': lambda int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
+        abs(getattr(lhs(clhs),'word_offsets')[-1] - getattr(rhs(crhs),'word_offsets')[-1]) <= int_(crhs)),
+    '.without': lambda int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
+        abs(getattr(lhs(clhs),'word_offsets')[-1] - getattr(rhs(crhs),'word_offsets')[-1]) > int_(crhs)),
+    # sets
         # For ease of testing, temporarily allow tuples of strings in place of legitimate candidates
     '.arg_to_string': lambda x: lambda c: x(c) if isinstance(x(c), basestring) else x(c).get_span(),
     '.left_tokens': lambda x: lambda c: c['lf_helpers']['get_left_tokens'](x(c)),

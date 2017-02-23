@@ -171,12 +171,6 @@ test_examples = [
         explanation='label True because the word "wife" is in the sentence',
         candidate=-3658950303959694808,
         denotation=1),
-#     # Left words (paraphrase)
-#     Example(
-#         explanation="label True because 'wife' to the left of arg 2",
-#         candidate=-3658950303959694808,
-#         denotation=1),
-    ####
 
     # MANY MORE TO COME HERE (see research notes)
 
@@ -266,6 +260,46 @@ test_examples = [
         explanation="label True because there are no colors words in the greek words",
         candidate=('foo', 'bar'),
         denotation=1),
+    # Index left
+    Example(
+        explanation="label True because arg 2 is left of arg 1",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # Index right
+    Example(
+        explanation="label True because arg 1 is right of arg 2",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # Index left equality
+    Example(
+        explanation="label True because arg 2 is 22 words to the left of arg 1",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # Index left inequality
+    Example(
+        explanation="label True because arg 2 is more than three words to the left of arg 1",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # Index left inequality 2
+    Example(
+        explanation="label True because not arg 2 is more than fifty words to the left of arg 1",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # Index within
+    Example(
+        explanation="label True because arg 1 is within 25 words of arg 2",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # Index without
+    Example(
+        explanation="label True because arg 1 is not within 5 words of arg 2",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # # Between
+    # Example(
+    #     explanation="label True because 'wife' is left of arg 1",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
 #     # Composition0
 #     Example(
 #         explanation="label True because 'wife' is between arg 1 and arg 2 and 'years' is to the left of arg 1",

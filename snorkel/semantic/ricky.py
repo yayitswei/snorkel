@@ -114,6 +114,7 @@ unary_rules = [
     Rule('$List', '$StringList', sems0),
     Rule('$List', '$IntList', sems0),
     Rule('$List', '$TokenList', sems0),
+    Rule('$List', '$PhraseList', sems0),
     Rule('$ROOT', '$LF', lambda sems: ('.root', sems[0])),
 ]
 
@@ -183,55 +184,62 @@ compositional_rules = [
         # "more than five of X words are upper"
     Rule('$Bool', '$IntToBool $BoolList', lambda (func_,boollist_): ('.call', func_, ('.sum', boollist_))),
 
-    # Indices
-    Rule('$Phrases', '$String', lambda (str_,): ('.str_to_phrases', str_)),
-    Rule('$Phrase', '$ArgX', lambda (arg_,): ('.arg_to_phrase', arg_)),
-    Rule('$Bool', '$Phrase $PhraseToBool', lambda (phr_, func_): ('.call', func_, phr_)),
-        # "is left of (the word) Y"
-    Rule('$PhraseToBool', '$Direction $Phrase', 
-        lambda (dir_, phr_): (dir_, ('.more',), ('.int', 0), phr_)),
-        # "is two words left of Y"
-    Rule('$PhraseToBool', '$Int ?$Word $Direction $Phrase', 
-        lambda (int_, word_, dir_, phr_): (dir_, ('.equals',), int_, phr_)),
-        # "is more than two words left of Y"
-    Rule('$PhraseToBool', '$Compare $Int ?$Word $Direction $Phrase', 
-        lambda (cmp_, int_, word_, dir_, phr_): (dir_, (cmp_,), int_, phr_)),
-        # "is within two words of Y"
-    Rule('$PhraseToBool', '$WithIO $Int ?$Word $Phrase', 
-        lambda (win_, int_, word_, phr_): (win_, int_, phr_)),
-        # "is between X and Y"
-    # Rule('$PhraseToBool', '$Compare $Int $Direction ?$Word $Phrase', lambda sems: TBD,
+    # Direction
+        # "is left of Y"
+    Rule('$StringToBool', '$String $Direction $ArgX', lambda (list_,): ('.in', ('.extract_field', list_, ('.string', 'words')))),
+        # "is two words left of Y"    
+
+    # # Indices
+    # Rule('$Phrases', '$String', lambda (str_,): ('.str_to_phrases', str_)),
+    # Rule('$Phrase', '$ArgX', lambda (arg_,): ('.arg_to_phrase', arg_)),
+    # Rule('$Bool', '$Phrase $PhraseToBool', lambda (phr_, func_): ('.call', func_, phr_)),
+    #     # "is left of (the word) Y"
+    # Rule('$PhraseToBool', '$Direction $Phrase', 
+    #     lambda (dir_, phr_): (dir_, ('.more',), ('.int', 0), phr_)),
+    #     # "is two words left of Y"
+    # Rule('$PhraseToBool', '$Int ?$Word $Direction $Phrase', 
+    #     lambda (int_, word_, dir_, phr_): (dir_, ('.equals',), int_, phr_)),
+    #     # "is more than two words left of Y"
+    # Rule('$PhraseToBool', '$Compare $Int ?$Word $Direction $Phrase', 
+    #     lambda (cmp_, int_, word_, dir_, phr_): (dir_, (cmp_,), int_, phr_)),
+    #     # "is within two words of Y"
+    # Rule('$PhraseToBool', '$WithIO $Int ?$Word $Phrase', 
+    #     lambda (win_, int_, word_, phr_): (win_, int_, phr_)),
+    #     # "is between X and Y"
+    # # Rule('$PhraseToBool', TBD, lambda sems: TBD,
 
     # DEPRECATED:
     # Rule('$Bool', '$IntToBool $List', lambda sems: ('.call', sems[0], ('.count', sems[1]))), 
         
     # Count
-    Rule('$Int', '$Count $List', sems_in_order),
+            # "the number of (words left of arg 1) is 5"
+    Rule('$Int', '$Count $TokenList', sems_in_order),
             # "at least one noun is to the left..."
     Rule('$Bool', '$IntToBool $POS $Exists $TokenList', lambda sems: 
-        ('.call', sems[0], ('.count', ('.filter_attr', sems[3], ('.string', 'pos_tags'), sems[1])))),
+        ('.call', sems[0], ('.count', ('.filter_by_attr', sems[3], ('.string', 'pos_tags'), sems[1])))),
             # "at least one person is to the left..."
     Rule('$Bool', '$IntToBool $NER $Exists $TokenList', lambda sems: 
-        ('.call', sems[0], ('.count', ('.filter_attr', sems[3], ('.string', 'ner_tags'), sems[1])))), 
+        ('.call', sems[0], ('.count', ('.filter_by_attr', sems[3], ('.string', 'ner_tags'), sems[1])))), 
             # "there are not three people to the left..."
-    Rule('$Bool', '$Exists $Not $Int $List', lambda sems: ('.call', ('.notequals', sems[2]), ('.count', sems[3]))), 
+    Rule('$Bool', '$Exists $Not $Int $TokenList', lambda sems: ('.call', ('.notequals', sems[2]), ('.count', sems[3]))), 
             # "there are three nouns to the left..."
-    Rule('$Bool', '$Exists $Int $List', lambda sems: ('.call', ('.equals', sems[1]), ('.count', sems[2]))), 
+    Rule('$Bool', '$Exists $Int $TokenList', lambda sems: ('.call', ('.equals', sems[1]), ('.count', sems[2]))), 
             # "there are at least two nouns to the left..."
-    Rule('$Bool', '$Exists $IntToBool $List', lambda sems: ('.call', sems[1], ('.count', sems[2]))),
+    Rule('$Bool', '$Exists $IntToBool $TokenList', lambda sems: ('.call', sems[1], ('.count', sems[2]))),
     
     # Context
     Rule('$ArgX', '$Arg $Int', sems_in_order),
 
-    Rule('$TokenList', '$Direction $ArgX', lambda (dir_, arg): (dir_ + '_tokens', arg)),
-    Rule('$TokenList', '$Between $ArgX $And $ArgX', lambda sems: (sems[0] + '_tokens', sems[1], sems[3])),
-    Rule('$TokenList', '$Sentence', lambda sems: (sems[0] + '_tokens',)),
+    Rule('$PhraseList', '$Direction $ArgX', lambda (dir_, arg): (dir_, arg)),
+    Rule('$PhraseList', '$Between $ArgX $And $ArgX', lambda sems: (sems[0], sems[1], sems[3])),
+    Rule('$PhraseList', '$Sentence', lambda sems: (sems[0],)),
     
-    Rule('$StringList', '$TokenList', lambda sems: ('.field', sems[0], ('.string', 'words'))),
-    Rule('$TokenList', '$TokenList $Word', lambda sems: ('.filter_words', sems[0], ('.string', 'words'))),
-    Rule('$TokenList', '$Word $TokenList', lambda sems: ('.filter_words', sems[1], ('.string', 'words'))),
-    Rule('$TokenList', '$POS $TokenList', lambda sems: ('.filter_attr', sems[1], ('.string', 'pos_tags'), sems[0])),
-    Rule('$TokenList', '$NER $TokenList', lambda sems: ('.filter_attr', sems[1], ('.string', 'ner_tags'), sems[0])),
+    Rule('$StringList', '$PhraseList', lambda sems: ('.extract_field', sems[0], ('.string', 'words'))),
+    Rule('$TokenList', '$PhraseList', lambda sems: ('.filter_to_unigrams', sems[0])),
+    Rule('$PhraseList', '$PhraseList $Word', lambda sems: ('.filter_to_alnum', sems[0])),
+    Rule('$PhraseList', '$Word $PhraseList', lambda sems: ('.filter_to_alnum', sems[1])),
+    Rule('$PhraseList', '$POS $PhraseList', lambda sems: ('.filter_by_attr', sems[1], ('.string', 'pos_tags'), sems[0])),
+    Rule('$PhraseList', '$NER $PhraseList', lambda sems: ('.filter_by_attr', sems[1], ('.string', 'ner_tags'), sems[0])),
 
     # Slices
     # TODO: Test these more thoroughly
@@ -281,13 +289,13 @@ snorkel_ops = {
         # call a 'hungry' evaluated function on one or more arguments
     '.call': lambda *x: lambda c: x[0](c)(x[1])(c), #TODO: extend to more than one argument?
         # apply an element to a list of functions (then call 'any' or 'all' to convert to boolean)
-    '.composite_and': lambda x, y: lambda cxy: lambda z: lambda cz: all([x(lambda c: yi)(cxy)(z(cz)) for yi in y(cxy)]),
-    '.composite_or':  lambda x, y: lambda cxy: lambda z: lambda cz: any([x(lambda c: yi)(cxy)(z(cz)) for yi in y(cxy)]),
+    '.composite_and': lambda x, y: lambda cxy: lambda z: lambda cz: all([x(lambda c: yi)(cxy)(z)(cz)==True for yi in y(cxy)]),
+    '.composite_or':  lambda x, y: lambda cxy: lambda z: lambda cz: any([x(lambda c: yi)(cxy)(z)(cz)==True for yi in y(cxy)]),
     # logic
         # NOTE: and/or expect individual inputs, not/all/any/none expect a single iterable of inputs
     '.and': lambda *x: lambda c: all(xi(c)==True for xi in x), 
     '.or': lambda *x: lambda c: any(xi(c)==True for xi in x),
-    '.not': lambda x: lambda c: not x(c),
+    '.not': lambda x: lambda c: not x(c)==True,
     '.all': lambda x: lambda c: all(xi==True for xi in x(c)),
     '.any': lambda x: lambda c: any(xi==True for xi in x(c)),
     '.none': lambda x: lambda c: not any(xi==True for xi in x(c)),
@@ -316,29 +324,31 @@ snorkel_ops = {
     # context
     '.arg': lambda x: lambda c: c['candidate'][x(c) - 1],
     # indices
-    '.arg_to_phrase': lambda arg_: lambda c: c['lf_helpers']['get_phrase_from_span'](arg_(c)),
-    '.str_to_phrases': lambda str_: lambda c: c['lf_helpers']['get_phrases_from_text'](c['candidate'][0].get_parent(), str_(c)),
-    '.left': lambda cmp_, int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
-        getattr(lhs(clhs),'word_offsets')[0] < getattr(rhs(crhs),'word_offsets')[0] and # left condition
-        cmp_(lambda c: -(getattr(rhs(crhs),'word_offsets')[0]) + int_(clhs))(crhs)
-            (lambda c: -(getattr(lhs(clhs),'word_offsets')[0]))(clhs)),
-    '.right': lambda cmp_, int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
-        getattr(lhs(clhs),'word_offsets')[-1] > getattr(rhs(crhs),'word_offsets')[-1] and # right condition
-        cmp_(lambda c: getattr(rhs(crhs),'word_offsets')[-1] + int_(clhs))(crhs)
-        (lambda c: getattr(lhs(clhs),'word_offsets')[-1])(clhs)),
+    # '.arg_to_phrase': lambda arg_: lambda c: c['lf_helpers']['get_phrase_from_span'](arg_(c)),
+    # '.str_to_phrases': lambda str_: lambda c: c['lf_helpers']['get_phrases_from_text'](c['candidate'][0].get_parent(), str_(c)),
+    # '.left': lambda cmp_, int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
+    #     getattr(lhs(clhs),'word_offsets')[0] < getattr(rhs(crhs),'word_offsets')[0] and # left condition
+    #     cmp_(lambda c: -(getattr(rhs(crhs),'word_offsets')[0]) + int_(clhs))(crhs)
+    #         (lambda c: -(getattr(lhs(clhs),'word_offsets')[0]))(clhs)),
+    # '.right': lambda cmp_, int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
+    #     getattr(lhs(clhs),'word_offsets')[-1] > getattr(rhs(crhs),'word_offsets')[-1] and # right condition
+    #     cmp_(lambda c: getattr(rhs(crhs),'word_offsets')[-1] + int_(clhs))(crhs)
+    #     (lambda c: getattr(lhs(clhs),'word_offsets')[-1])(clhs)),
     # '.between':
     '.within': lambda int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
         abs(getattr(lhs(clhs),'word_offsets')[-1] - getattr(rhs(crhs),'word_offsets')[-1]) <= int_(crhs)),
     '.without': lambda int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
         abs(getattr(lhs(clhs),'word_offsets')[-1] - getattr(rhs(crhs),'word_offsets')[-1]) > int_(crhs)),
     # sets
-        # For ease of testing, temporarily allow tuples of strings in place of legitimate candidates
+        # NOTE: For ease of testing, temporarily allow tuples of strings in place of legitimate candidates
     '.arg_to_string': lambda x: lambda c: x(c) if isinstance(x(c), basestring) else x(c).get_span(),
-    '.left_tokens': lambda x: lambda c: c['lf_helpers']['get_left_tokens'](x(c)),
-    '.right_tokens': lambda x: lambda c: c['lf_helpers']['get_right_tokens'](x(c)),
-    '.between_tokens': lambda x, y: lambda c: c['lf_helpers']['get_between_tokens'](x(c), y(c)),
-    '.sentence_tokens': lambda c: c['lf_helpers']['get_sentence_tokens'](c['candidate'][0]),
-    '.field': lambda toklist, attr: lambda c: [getattr(t, attr(c)) for t in toklist(c)],
-    '.filter_attr': lambda toklist, attr, val: lambda c: [t for t in toklist(c) if getattr(t, attr(c)) == val(c)],
-    '.filter_words': lambda toklist, attr: lambda c: [t for t in toklist(c) if any(letter.isalnum() for letter in getattr(t, attr(c)))],
+    '.left': lambda x: lambda c: c['lf_helpers']['get_left_tokens'](x(c)),
+    '.right': lambda x: lambda c: c['lf_helpers']['get_right_tokens'](x(c)),
+    '.between': lambda x, y: lambda c: c['lf_helpers']['get_between_tokens'](x(c), y(c)),
+    '.sentence': lambda c: c['lf_helpers']['get_sentence_tokens'](c['candidate'][0]),
+    '.extract_field': lambda phrlist, attr: lambda c: [getattr(t, attr(c))[0] for t in phrlist(c)],
+        # TODO: allow multiple-word nouns, etc.
+    '.filter_by_attr': lambda phrlist, attr, val: lambda c: [t for t in phrlist(c) if getattr(t, attr(c))[0] == val(c)],
+    '.filter_to_alnum': lambda phrlist: lambda c: [t for t in phrlist(c) if any(letter.isalnum() for letter in getattr(t, 'words'))],
+    '.filter_to_unigrams': lambda phrlist: lambda c: [p for p in phrlist(c) if len(getattr(p, 'words')) == 1],
     }

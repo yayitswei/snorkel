@@ -230,16 +230,16 @@ test_examples = [
         explanation="label True because at least one word to the left of arg 1 starts with a spouse word",
         candidate=-3658950303959694808,
         denotation=1),
-    # Intersection0
-    Example(
-        explanation="label True because there is at least one word from colors in the bluebird words",
-        candidate=('foo', 'bar'),
-        denotation=1),
-    # Intersection1
-    Example(
-        explanation="label True because less than two colors words are in bluebird",
-        candidate=('foo', 'bar'),
-        denotation=1),
+    # # Intersection0
+    # Example(
+    #     explanation="label True because there is at least one word from colors in the bluebird words",
+    #     candidate=('foo', 'bar'),
+    #     denotation=1),
+    # # Intersection1
+    # Example(
+    #     explanation="label True because less than two colors words are in bluebird",
+    #     candidate=('foo', 'bar'),
+    #     denotation=1),
     # All
     Example(
         explanation='label True because all of the colors are lowercase',
@@ -255,46 +255,46 @@ test_examples = [
         explanation='label True because none of the smalls are capitalized',
         candidate=('foo', 'bar'),
         denotation=1),
-    # Disjoint
-    Example(
-        explanation="label True because there are no colors words in the greek words",
-        candidate=('foo', 'bar'),
-        denotation=1),
-    # Index left
-    Example(
-        explanation="label True because arg 2 is left of arg 1",
-        candidate=-3658950303959694808,
-        denotation=1),
-    # Index right
-    Example(
-        explanation="label True because arg 1 is right of arg 2",
-        candidate=-3658950303959694808,
-        denotation=1),
-    # Index left equality
-    Example(
-        explanation="label True because arg 2 is 22 words to the left of arg 1",
-        candidate=-3658950303959694808,
-        denotation=1),
-    # Index left inequality
-    Example(
-        explanation="label True because arg 2 is more than three words to the left of arg 1",
-        candidate=-3658950303959694808,
-        denotation=1),
-    # Index left inequality 2
-    Example(
-        explanation="label True because not arg 2 is more than fifty words to the left of arg 1",
-        candidate=-3658950303959694808,
-        denotation=1),
-    # Index within
-    Example(
-        explanation="label True because arg 1 is within 25 words of arg 2",
-        candidate=-3658950303959694808,
-        denotation=1),
-    # Index without
-    Example(
-        explanation="label True because arg 1 is not within 5 words of arg 2",
-        candidate=-3658950303959694808,
-        denotation=1),
+    # # Disjoint
+    # Example(
+    #     explanation="label True because there are no colors words in the greek words",
+    #     candidate=('foo', 'bar'),
+    #     denotation=1),
+    # # Index left
+    # Example(
+    #     explanation="label True because arg 2 is left of arg 1",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
+    # # Index right
+    # Example(
+    #     explanation="label True because arg 1 is right of arg 2",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
+    # # Index left equality
+    # Example(
+    #     explanation="label True because arg 2 is 22 words to the left of arg 1",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
+    # # Index left inequality
+    # Example(
+    #     explanation="label True because arg 2 is more than three words to the left of arg 1",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
+    # # Index left inequality 2
+    # Example(
+    #     explanation="label True because not arg 2 is more than fifty words to the left of arg 1",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
+    # # Index within
+    # Example(
+    #     explanation="label True because arg 1 is within 25 words of arg 2",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
+    # # Index without
+    # Example(
+    #     explanation="label True because arg 1 is not within 5 words of arg 2",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
     # # Between
     # Example(
     #     explanation="label True because 'wife' is left of arg 1",

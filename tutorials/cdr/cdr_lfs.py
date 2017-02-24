@@ -50,7 +50,7 @@ def get_cdr_lfs():
 
     def LF_induce(c):
         """
-        Label true if the chemical and disease are within 45 characters of each other and a word between them contains 'induc'
+        Label true if the chemical is left of the disease and any word between the chemical and disease contains 'induc'
         """
         return 1 if re.search(r'{{A}}.{0,20}induc.{0,20}{{B}}', get_tagged_text(c), flags=re.I) else 0
 
@@ -110,6 +110,9 @@ def get_cdr_lfs():
 
     pat_terms = ['in a patient with', 'in patients with']
     def LF_in_patient_with(c):
+        """
+        Label false if a patient phrase is immediately before the disease
+        """
         return -1 if re.search(ltp(pat_terms) + '{{B}}', get_tagged_text(c), flags=re.I) else 0
 
     uncertain = ['combin', 'possible', 'unlikely']
@@ -152,13 +155,13 @@ def get_cdr_lfs():
     procedure, following = ['inject', 'administrat'], ['following']
     def LF_d_following_c(c):
         """
-        Label true because a following word is between the disease and the chemical and a procedure word comes after the chemical
+        Label true because 'following' is between the disease and the chemical and a procedure word comes after the chemical
         """
         return 1 if re.search('{{B}}.{0,50}' + ltp(following) + '.{0,20}{{A}}.{0,50}' + ltp(procedure), get_tagged_text(c), flags=re.I) else 0
 
     def LF_measure(c):
         """
-        Label false because 'measur' comes before the chemical
+        Label false because a word that comes before the chemical starts with 'measur'
         """
         return -1 if re.search('measur.{0,75}{{A}}', get_tagged_text(c), flags=re.I) else 0
 

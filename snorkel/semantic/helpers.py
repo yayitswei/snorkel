@@ -176,9 +176,6 @@ def get_left_phrases(span, cmp='.gt', num=0, unit='words', n_min=1, n_max=3):
     return phrases
 
 def get_right_phrases(span, cmp='.gt', num=0, unit='words', n_min=1, n_max=3):
-    """
-    Note: Bases distances on the starts of words/chars
-    """
     phrases = []
     k = span.get_word_end()
     sent = span.get_parent()._asdict()
@@ -197,6 +194,22 @@ def get_right_phrases(span, cmp='.gt', num=0, unit='words', n_min=1, n_max=3):
 
 def get_within_phrases(span):
     pass
+#     phrases = []
+#     ks = span.get_word_start()
+#     ke = span.get_word_end()
+#     sent = span.get_parent()._asdict()
+#     for L in range(n_min, n_max+1):
+#         for i in range(k+1, len(sent['words'])-L):
+#             if unit=='words':
+#                 if not inequalities[cmp](i, k + num):
+#                     continue
+#             else:
+#                 I = span.word_to_char_index(i)
+#                 K = span.word_to_char_index(k) + len(sent['words'][k])
+#                 if not inequalities[cmp](I, K + num):
+#                     continue
+#             phrases.append(build_phrase(sent, i, L))
+#     return phrases    
 
 def get_between_phrases(span0, span1, n_min=1, n_max=3):
     phrases = []

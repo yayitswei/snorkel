@@ -196,9 +196,29 @@ test_examples = [
         explanation="label True because not arg 2 is more than fifty words to the left of arg 1",
         candidate=-3658950303959694808,
         denotation=1),
+    # Index within (<=)
+    Example(
+        explanation="label True because 'wife' is within three words to the left of arg 1",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # Index OrList left
+    Example(
+        explanation="label True because 'husband' or 'wife' is within three words to the left of arg 1",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # Index AndList left
+    Example(
+        explanation="label True because not 'husband' and 'wife' are within three words to the left of arg 1",
+        candidate=-3658950303959694808,
+        denotation=1),
+    # # Index OrList right
+    # Example(
+    #     explanation="label True because 'wife' is less than three words to the left of arg 1 or arg2",
+    #     candidate=-3658950303959694808,
+    #     denotation=1),
     # # Index within
     # Example(
-    #     explanation="label True because arg 1 is within 25 words of arg 2",
+    #     explanation="label True because 'wife' is within three words of arg 1",
     #     candidate=-3658950303959694808,
     #     denotation=1),
     # # Index without

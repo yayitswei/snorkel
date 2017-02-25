@@ -57,7 +57,7 @@ lexical_rules.extend(
     [Rule('$Contains', w, '.contains') for w in ['contains', 'contain']] +
     [Rule('$StartsWith', w, '.startswith') for w in ['starts with', 'start with']] +
     [Rule('$EndsWith', w, '.endswith') for w in ['ends with', 'end with']] +
-    [Rule('$Left', w, '.left') for w in ['left', 'before', 'precedes', 'preceding']] +
+    [Rule('$Left', w, '.left') for w in ['left', 'before', 'precedes', 'preceding', 'followed by']] +
     [Rule('$Right', w, '.right') for w in ['right', 'after', 'follows', 'following']] +
     [Rule('$Between', w, '.between') for w in ['between', 'inbetween']] +
     [Rule('$Separator', w) for w in [',', ';', '/']] +
@@ -188,31 +188,34 @@ compositional_rules = [
 
     ### Context ###
     Rule('$ArgX', '$Arg $Int', sems_in_order),
+    Rule('$ArgXOr', '$ArgX $Or $ArgX', lambda (arg1_, and_, arg2_): ('.list', arg1_, arg2_)),
+    Rule('$ArgXAnd', '$ArgX $And $ArgX', lambda (arg1_, and_, arg2_): ('.list', arg1_, arg2_)),
 
         # make lists
     Rule('$PhraseList', '?$Word $Direction $ArgX', lambda (word_, dir_, arg_): (dir_, arg_)),
-    Rule('$PhraseList', '?$Word $Between $ArgX $And $ArgX', 
-        lambda (word_, btw_, arg1_, and_, arg2_): (btw_, arg1_, arg2_)),
+    Rule('$PhraseList', '?$Word $Between $ArgXAnd', lambda (word_, btw_, arglist_): (btw_, arglist_)),
     Rule('$PhraseList', '$Sentence', lambda (sent,): (sent,)),
 
         # implicit 'in'
-        # "is left of Y"
+    # Rule('$StringToBool', '$StringAndArgToBool $ArgX', sems_in_order),
+    # Rule('$StringToBool', '$StringAndArgToBool $ArgXOr', lambda sems: ('.composite_or', (sems[0],), sems[1])),
+    # Rule('$StringToBool', '$StringAndArgToBool $ArgXAnd', lambda sems: ('.composite_and', (sems[0],), sems[1])),
+
+            # "is left of Y"
     Rule('$StringToBool', '$Direction $ArgX',
         lambda (dir_, arg_): ('.in', ('.extract_text', (dir_, arg_)))),
-        # "is two words left of Y"    
+            # "is two words left of Y"    
     Rule('$StringToBool', '$Int ?$Unit $Direction $ArgX', 
-        lambda (int_, unit_, dir_, arg_): 
-            ('.in', ('.extract_text', (dir_, arg_, ('.string', '.eq'), int_, 
-                                       ('.string', (unit_ if unit_ else 'words')))))),
-        # "is at least 40 words to the left of"
+        lambda (int_, unit_, dir_, arg_): ('.in', ('.extract_text', 
+            (dir_, arg_, ('.string', '.eq'), int_, ('.string', (unit_ if unit_ else 'words')))))),
+            # "is at least 40 words to the left of"
     Rule('$StringToBool', '$Compare $Int ?$Unit $Direction $ArgX', 
-        lambda (cmp_, int_, unit_, dir_, arg_): 
-            ('.in', ('.extract_text', (dir_, arg_, ('.string', cmp_), int_, 
-                                       ('.string', (unit_ if unit_ else 'words')))))), 
-        # "between X and Y"
-    Rule('$StringToBool', '$Between $ArgX $And $ArgX', 
-        lambda (btw_, arg1_, and_, arg2_): 
-            ('.in', ('.extract_text', (btw_, arg1_, arg2_)))), 
+        lambda (cmp_, int_, unit_, dir_, arg_): ('.in', ('.extract_text', 
+            (dir_, arg_, ('.string', cmp_), int_,('.string', (unit_ if unit_ else 'words')))))), 
+            # "between X and Y"
+    Rule('$StringToBool', '$Between $ArgXAnd', 
+        lambda (btw_, arglist_): 
+            ('.in', ('.extract_text', (btw_, arglist_)))), 
     # Indices
     # Rule('$PhraseListOr', '$String', lambda (str_,): ('.str_to_phrases', str_)),
     # Rule('$Phrase', '$ArgX', lambda (arg_,): ('.arg_to_phrase', arg_)),
@@ -310,12 +313,15 @@ snorkel_ops = {
     '.intersection': lambda x, y: lambda c: list(set(x(c)).intersection(y(c))),
     # context
     '.arg': lambda x: lambda c: c['candidate'][x(c) - 1],
-    # sets
         # NOTE: For ease of testing, temporarily allow tuples of strings in place of legitimate candidates
     '.arg_to_string': lambda x: lambda c: x(c) if isinstance(x(c), basestring) else x(c).get_span(),
-    '.left': lambda *x: lambda c: c['lf_helpers']['get_left_phrases'](*[xi(c) for xi in x]),
-    '.right': lambda *x: lambda c: c['lf_helpers']['get_right_phrases'](*[xi(c) for xi in x]),
-    '.between': lambda x, y: lambda c: c['lf_helpers']['get_between_phrases'](x(c), y(c)),
+    # sets
+    '.left': lambda *x: lambda cx: cx['lf_helpers']['get_left_phrases'](*[xi(cx) for xi in x]),
+    '.right': lambda *x: lambda cx: cx['lf_helpers']['get_right_phrases'](*[xi(cx) for xi in x]),
+        # '.left': lambda *x: lambda cx: lambda y: lambda cy: cx['lf_helpers']['get_left_phrases'](y(cy), *[xi(cx) for xi in x]),
+        # '.right': lambda *x: lambda cx: lambda y: lambda cy: cx['lf_helpers']['get_right_phrases'](y(cy), *[xi(cx) for xi in x]),
+        # '.within': lambda *x: lambda c: c['lf_helpers']['get_within_phrases'](*[xi(c) for xi in x]),
+    '.between': lambda x: lambda c: c['lf_helpers']['get_between_phrases'](*[xi for xi in x(c)]),
     '.sentence': lambda c: c['lf_helpers']['get_sentence_phrases'](c['candidate'][0]),
     '.extract_text': lambda phrlist: lambda c: [getattr(p, 'text') for p in phrlist(c)],
     # '.extract_field': lambda phrlist, attr: lambda c: [getattr(t, attr(c)) for t in phrlist(c)],

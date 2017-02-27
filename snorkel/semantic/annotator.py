@@ -25,7 +25,8 @@ class TokenAnnotator(Annotator):
         Annotator.__init__(self)
     
     def annotate(self, tokens):
-        if len(tokens) == 1:
+        # Quotation marks are hard stops to prevent merging of multiple strings
+        if len(tokens) == 1 and tokens[0]['pos'] not in ["``", "\'\'"]:
             return [('$QueryToken', tokens[0]['word'])]
         else:
             return []

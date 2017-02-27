@@ -16,7 +16,7 @@ class SemanticParser():
 
     def preprocess(self, explanations):
         stopwords = (['is', 'are', 'be',
-                      'a', 'the', 
+                      'a', 'an', 'the', 
                       'to', 'of', 'from'])
         for explanation in explanations:
             explanation = explanation.replace("'", '"')
@@ -49,16 +49,23 @@ class SemanticParser():
                 print("{} LFs created from {} explanations".format(len(LFs), len(explanations)))
             return LFs
 
-    def evaluate(self, examples, 
+    def evaluate(self, 
+                examples, 
+                show_everything=False,
                 show_explanation=False, 
+                show_candidate=False,
+                show_sentence=False, 
+                show_parse=False,
+                show_semantics=False,
                 show_correct=False, 
                 show_incorrect=False,
                 show_redundant=False,
                 show_failed=False,
-                show_all=False,
                 only=[]):
         """Returns a pandas DataFrame with the explanations and various per-explanation stats"""
-        if show_all:
+        if show_everything:
+            show_explanation = show_candidate = show_sentence = show_parse = show_semantics = True
+        if show_semantics:
             show_correct = show_incorrect = show_redundant = show_failed = True
         examples = examples if isinstance(examples, list) else [examples]
         col_names = ['Correct', 'Incorrect', 'Redundant', 'Failed', 'Unknown']
@@ -74,7 +81,14 @@ class SemanticParser():
         for i, example in enumerate(examples):
             if only and i not in only:
                 continue
-            if show_explanation: print("Example {}: {}".format(i, example.explanation))
+            if example.explanation is None:
+                continue
+            if show_explanation: 
+                print("Example {}: {}".format(i, example.explanation))
+            if show_candidate:
+                print("CANDIDATE: {}".format(example.candidate))
+            if show_sentence:
+                print("SENTENCE: {}".format(example.candidate[0].get_parent()._asdict()['text']))
             nCorrect = nIncorrect = nRedundant = nFailed = nUnknown = 0
             semantics = set()
             parses = self.parse(
@@ -83,6 +97,8 @@ class SemanticParser():
                         verbose=False, 
                         return_parses=True)
             for parse in parses:
+                if show_parse:
+                    print("PARSE: {}".format(parse))
                 try:
                     if parse.semantics in semantics:
                         if show_redundant: print("R: {}".format(parse.semantics))
@@ -106,7 +122,7 @@ class SemanticParser():
                     nFailed += 1
             if nCorrect == 0:
                 print("WARNING: No correct parses found for the following explanation:")
-                print(example.explanation)
+                print("EXPLANATION: {}".format(example.explanation))
 
             example_names.append('Example{}'.format(i))
             correct.append(nCorrect)

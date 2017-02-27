@@ -28,7 +28,7 @@ def get_cdr_lfs():
 
     def LF_in_ctd_unspecified(c):
         """
-        Label false if the pair of canonical ids of the chemical and disease are in ctd_unspecified
+        Label false if the pair of canonical ids of the chemical and disease is in ctd_unspecified
         """
         return -1 * cand_in_ctd_unspecified(c)
 
@@ -50,7 +50,7 @@ def get_cdr_lfs():
 
     def LF_induce(c):
         """
-        Label true if the chemical is left of the disease and any word between the chemical and disease contains 'induc'
+        Label true if any word between the chemical and disease contains 'induc'
         """
         return 1 if re.search(r'{{A}}.{0,20}induc.{0,20}{{B}}', get_tagged_text(c), flags=re.I) else 0
 

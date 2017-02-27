@@ -62,7 +62,7 @@ lexical_rules.extend(
     [Rule('$Between', w, '.between') for w in ['between', 'inbetween']] +
     [Rule('$Separator', w) for w in [',', ';', '/']] +
     [Rule('$Count', w, '.count') for w in ['number', 'length', 'count']] +
-    [Rule('$Word', w, 'words') for w in ['word', 'words', 'term']] + 
+    [Rule('$Word', w, 'words') for w in ['word', 'words', 'term', 'terms', 'phrase', 'phrases']] + 
     [Rule('$Char', w, 'chars') for w in ['character', 'characters', 'letter', 'letters']] + 
     [Rule('$NounPOS', w, ('.string', 'NN')) for w in ['noun', 'nouns']] +
     [Rule('$DateNER', w, ('.string', 'DATE')) for w in ['date', 'dates']] +
@@ -70,10 +70,18 @@ lexical_rules.extend(
     [Rule('$PersonNER', w, ('.string', 'PERSON')) for w in ['person', 'people']] +
     [Rule('$LocationNER', w, ('.string', 'LOCATION')) for w in ['location', 'locations', 'place', 'places']] +
     [Rule('$OrganizationNER', w, ('.string', 'ORGANIZATION')) for w in ['organization', 'organizations']] +
-    [Rule('$Punctuation', w) for w in ['.', ',', ';', '!', '?']]
+    [Rule('$Punctuation', w) for w in ['.', ',', ';', '!', '?']] +
+    # FIXME: Temporary hardcode
+    [Rule('$ChemicalEntity', w, ('.string', 'Chemical')) for w in ['chemical', 'chemicals']] +
+    [Rule('$DiseaseEntity', w, ('.string', 'Disease')) for w in ['disease', 'diseases']]
+    # FIXME
     )
 
 unary_rules = [
+    # FIXME: Temporary hardcode
+    Rule('$ArgX', '$ChemicalEntity', ('.arg', ('.int', 1))),
+    Rule('$ArgX', '$DiseaseEntity', ('.arg', ('.int', 2))),
+    # FIXME
     Rule('$Bool', '$BoolLit', sems0),
     Rule('$BoolLit', '$True', sems0),
     Rule('$BoolLit', '$False', sems0),
@@ -121,7 +129,7 @@ unary_rules = [
 ]
 
 compositional_rules = [
-    Rule('$LF', '$Label $Bool $Because $Bool', lambda sems: (sems[0], sems[1], sems[3])),
+    Rule('$LF', '$Label $Bool $Because $Bool ?$Punctuation', lambda sems: (sems[0], sems[1], sems[3])),
     
     ### Logicals ###
     Rule('$Bool', '$Bool $Conj $Bool', lambda sems: (sems[1], sems[0], sems[2])),
@@ -149,6 +157,7 @@ compositional_rules = [
 
         # applying $StringToBool functions
     Rule('$Bool', '$String $StringToBool', lambda sems: ('.call', sems[1], sems[0])),
+    Rule('$Bool', '$String $Not $StringToBool', lambda (str_, not_, func_): (not_, ('.call', func_, str_))),
     Rule('$Bool', '$StringListOr $StringToBool', lambda sems: ('.any', ('.map', sems[1], sems[0]))),
     Rule('$Bool', '$StringListAnd $StringToBool', lambda sems: ('.all', ('.map', sems[1], sems[0]))),
     Rule('$BoolList', '$StringList $StringToBool', lambda sems: ('.map', sems[1], sems[0])),
@@ -192,8 +201,8 @@ compositional_rules = [
     Rule('$ArgXAnd', '$ArgX $And $ArgX', lambda (arg1_, and_, arg2_): ('.list', arg1_, arg2_)),
 
         # make lists
-    Rule('$PhraseList', '?$Word $Direction $ArgX', lambda (word_, dir_, arg_): (dir_, arg_)),
-    Rule('$PhraseList', '?$Word $Between $ArgXAnd', lambda (word_, btw_, arglist_): (btw_, arglist_)),
+    Rule('$PhraseList', '$Direction $ArgX', lambda (dir_, arg_): (dir_, arg_)),
+    Rule('$PhraseList', '$Between $ArgXAnd', lambda (btw_, arglist_): (btw_, arglist_)),
     Rule('$PhraseList', '$Sentence', lambda (sent,): (sent,)),
 
         # implicit 'in'

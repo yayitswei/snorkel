@@ -25,6 +25,10 @@ class Example(object):
 # arg1 = Victoria Beckham
 # arg2 = David Beckham
 
+# -5889490471583847150 =>
+# "Clinical and experimental data published to date suggest several possible 
+# mechanisms by which cocaine may result in acute myocardial infarction."
+
 test_examples = [
     # Base
     Example(
@@ -114,6 +118,11 @@ test_examples = [
     # In
     Example(
         explanation="label True because 'bar' is in 'foobarbaz'",
+        candidate=('foo', 'bar'),
+        denotation=1),
+    # Not Inversion
+    Example(
+        explanation="label True because 'rab' is not in 'foobarbaz'",
         candidate=('foo', 'bar'),
         denotation=1),
     # Contains
@@ -407,13 +416,194 @@ spouse_examples = [
 
 
 cdr_examples = [
+    ### TESTING ###
+    # Example(
+    #     explanation="Label True because the chemical is to the left of the disease",
+    #     candidate=-5889490471583847150,
+    #     denotation=1
+    # ),    
+    ### TESTING ###
+    # LF_c_cause_d
     Example(
-        explanation="Label false because arg 1 ends with 'induced'",
-        candidate=('blue-induced', 'coma'),
+        explanation="""Label true because any causal phrase is between the 
+            chemical and the disease and the word 'not' is not between the 
+            chemical and the disease""",
+        candidate=6606713828167518488,
+        denotation=1),
+    # LF_c_d
+    Example(
+        explanation="Label true because the disease is immediately after the chemical",
+        candidate=4911918761913559389,
+        denotation=1),
+    # LF_c_induced_d
+    Example(
+        explanation="""Label true because the disease is immediately after the 
+            chemical and 'induc' or 'assoc' is in the chemical""",
+        candidate=6618773943628884463,
+        denotation=1),
+    # LF_c_treat_d
+    Example(
+        explanation="""Label false because any word between the chemical and 
+            the disease contains a treat word and the chemical is within 100 
+            characters to the left of the disease""",
+        candidate=5000202430163451980,
         denotation=-1),
+    # LF_c_treat_d_wide
     Example(
-        explanation="Label true because 'develop' is before the arg 2 and 'following' is between the arg 1 and arg 2",
-        candidate=('blue-induced', 'coma'),
+        explanation="""Label false because any word between the chemical and 
+            the disease contains a treat word and the chemical is left of the 
+            disease""",
+        candidate=-5412508044020208858,
+        denotation=-1),
+    # # LF_closer_chem
+    # Example(
+    #     explanation=None,
+    #     candidate=-1954799400282697253,
+    #     denotation=-1),
+    # # LF_closer_dis
+    # Example(
+    #     explanation=None,
+    #     candidate=-130640710948826159,
+    #     denotation=-1),
+    # # LF_ctd_marker_c_d
+    # Example(
+    #     explanation=None,
+    #     candidate=3829603392041554457,
+    #     denotation=1),
+    # # LF_ctd_marker_induce
+    # Example(
+    #     explanation=None,
+    #     candidate=-305419566691337972,
+    #     denotation=1),
+    # # LF_ctd_therapy_treat
+    # Example(
+    #     explanation=None,
+    #     candidate=9013931201987912271,
+    #     denotation=-1),
+    # # LF_ctd_unspecified_treat
+    # Example(
+    #     explanation=None,
+    #     candidate=-6222536315024461563,
+    #     denotation=-1),
+    # # LF_ctd_unspecified_induce
+    # Example(
+    #     explanation=None,
+    #     candidate=-249729854237013355,
+    #     denotation=1),
+    # LF_d_following_c
+    Example(
+        explanation="""Label true because 'following' is between the disease 
+            and the chemical and any word after the chemical contains a 
+            procedure word""",
+        candidate=None,
+        denotation=1),
+    # LF_d_induced_by_c
+    Example(
+        explanation="""Label True because 'induced by', 'caused by', or 'due to' 
+            is between the disease and the chemical.""",
+        candidate=-6762188659294394913,
+        denotation=1),
+    # LF_d_induced_by_c_tight
+    Example(
+        explanation=None,
+        candidate=-8780309308829124768,
+        denotation=1),
+    # LF_d_treat_c
+    Example(
+        explanation="""Label false because any word between the chemical and 
+            the disease contains a treat word and the chemical is within 100
+            characters to the right of the disease""",
+        candidate=192760603909025752,
+        denotation=-1),
+    # LF_develop_d_following_c
+    Example(
+        explanation=None,
+        candidate=-1817051214703978965,
+        denotation=1),
+    # LF_far_c_d
+    Example(
+        explanation=None,
+        candidate=6240026992471976183,
+        denotation=-1),
+    # LF_far_d_c
+    Example(
+        explanation=None,
+        candidate=-5736847953411058109,
+        denotation=-1),
+    # LF_improve_before_disease
+    Example(
+        explanation=None,
+        candidate=None,
+        denotation=-1),
+    # LF_in_ctd_unspecified
+    Example(
+        explanation=None,
+        candidate=-5889490471583847150,
+        denotation=-1),
+    # LF_in_ctd_therapy
+    Example(
+        explanation=None,
+        candidate=1928996051652884359,
+        denotation=-1),
+    # LF_in_ctd_marker
+    Example(
+        explanation=None,
+        candidate=-5889490471583847150,
+        denotation=1),
+    # LF_in_patient_with
+    Example(
+        explanation=None,
+        candidate=-1516295839967862351,
+        denotation=-1),
+    # LF_induce
+    Example(
+        explanation="Label true because any word between the chemical and the disease contains 'induc'",
+        candidate=-6270620972052954916,
+        denotation=1),
+    # LF_induce_name
+    Example(
+        explanation="Label True because the chemical contains 'induc'",
+        candidate=3240895064801201846,
+        denotation=1),
+    # LF_induced_other
+    Example(
+        explanation="Label false if any word between the chemical and the disease ends with 'induced'",
+        candidate=2418695948208481836,
+        denotation=-1),
+    # LF_level
+    Example(
+        explanation=None,
+        candidate=7137204889488246129,
+        denotation=-1),
+    # LF_measure
+    Example(
+        explanation=None,
+        candidate=4105760717408167415,
+        denotation=-1),
+    # LF_neg_d
+    Example(
+        explanation=None,
+        candidate=7708285380769583739,
+        denotation=-1),
+    # LF_risk_d
+    Example(
+        explanation=None,
+        candidate=4499078534190694908,
+        denotation=1),
+    # LF_treat_d
+    Example(
+        explanation=None,
+        candidate=-4670194985477947653,
+        denotation=-1),
+    # LF_uncertain
+    Example(
+        explanation="Label false if any word before the chemical starts with an uncertain word",
+        candidate=1589307577177419147,
+        denotation=-1),
+    # LF_weak_assertions
+    Example(
+        explanation=None,
+        candidate=8898005229761872427,
         denotation=-1),
 ]
 
@@ -423,7 +613,7 @@ def get_examples(which, candidates):
         examples = test_examples
     elif which=='spouse':
         examples = spouse_examples
-    elif which=='cdr':
+    elif which=='semparse_cdr':
         examples = cdr_examples
     else:
         raise Exception("Invalid example set provided.")

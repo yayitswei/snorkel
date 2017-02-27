@@ -15,7 +15,7 @@ class SemanticParser():
                                absorb=absorb)
 
     def preprocess(self, explanations):
-        stopwords = (['is', 'are', 'be',
+        stopwords = (['is', 'are', 'be', 'comes', 'appears', 'occurs',
                       'a', 'an', 'the', 
                       'to', 'of', 'from'])
         for explanation in explanations:
@@ -84,11 +84,11 @@ class SemanticParser():
             if example.explanation is None:
                 continue
             if show_explanation: 
-                print("Example {}: {}".format(i, example.explanation))
+                print("Example {}: {}\n".format(i, example.explanation))
             if show_candidate:
-                print("CANDIDATE: {}".format(example.candidate))
+                print("CANDIDATE: {}\n".format(example.candidate))
             if show_sentence:
-                print("SENTENCE: {}".format(example.candidate[0].get_parent()._asdict()['text']))
+                print("SENTENCE: {}\n".format(example.candidate[0].get_parent()._asdict()['text']))
             nCorrect = nIncorrect = nRedundant = nFailed = nUnknown = 0
             semantics = set()
             parses = self.parse(
@@ -98,7 +98,7 @@ class SemanticParser():
                         return_parses=True)
             for parse in parses:
                 if show_parse:
-                    print("PARSE: {}".format(parse))
+                    print("PARSE: {}\n".format(parse))
                 try:
                     if parse.semantics in semantics:
                         if show_redundant: print("R: {}".format(parse.semantics))
@@ -122,7 +122,7 @@ class SemanticParser():
                     nFailed += 1
             if nCorrect == 0:
                 print("WARNING: No correct parses found for the following explanation:")
-                print("EXPLANATION: {}".format(example.explanation))
+                print("EXPLANATION: {}\n".format(example.explanation))
 
             example_names.append('Example{}'.format(i))
             correct.append(nCorrect)

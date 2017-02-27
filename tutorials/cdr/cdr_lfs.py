@@ -104,7 +104,7 @@ def get_cdr_lfs():
 
     def LF_improve_before_disease(c):
         """
-        Label false if a word before the chemical starts with 'improv'
+        Label false if a word before the disease starts with 'improv'
         """
         return rule_regex_search_before_B(c, 'improv.*', -1)
 
@@ -167,13 +167,13 @@ def get_cdr_lfs():
 
     def LF_level(c):
         """
-        Label false because ' level' comes after the chemical
+        Label false because 'level' comes after the chemical
         """
         return -1 if re.search('{{A}}.{0,25} level', get_tagged_text(c), flags=re.I) else 0
 
     def LF_neg_d(c):
         """
-        Label false because 'none', 'not', or 'no' comes before the chemical
+        Label false because 'none', 'not', or 'no' comes before the disease
         """
         return -1 if re.search('(none|not|no) .{0,25}{{B}}', get_tagged_text(c), flags=re.I) else 0
 

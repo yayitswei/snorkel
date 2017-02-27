@@ -154,7 +154,7 @@ def build_phrase(sent, i, L):
             contents.append(sent[f][i:i+L])
     return Phrase(*contents)
 
-def get_left_phrases(span, cmp='.gt', num=0, unit='words', n_min=1, n_max=3):
+def get_left_phrases(span, cmp='.gt', num=0, unit='words', n_min=1, n_max=4):
     """
     "at least 40 characters to the left of X" => (X, .geq, 40, chars)
     Note: Bases distances on the starts of words/chars
@@ -175,7 +175,7 @@ def get_left_phrases(span, cmp='.gt', num=0, unit='words', n_min=1, n_max=3):
             phrases.append(build_phrase(sent, i, L))
     return phrases
 
-def get_right_phrases(span, cmp='.gt', num=0, unit='words', n_min=1, n_max=3):
+def get_right_phrases(span, cmp='.gt', num=0, unit='words', n_min=1, n_max=4):
     phrases = []
     k = span.get_word_end()
     sent = span.get_parent()._asdict()
@@ -211,7 +211,7 @@ def get_within_phrases(span):
 #             phrases.append(build_phrase(sent, i, L))
 #     return phrases    
 
-def get_between_phrases(span0, span1, n_min=1, n_max=3):
+def get_between_phrases(span0, span1, n_min=1, n_max=4):
     phrases = []
     if span0.get_word_start() < span1.get_word_start():
         left_span = span0
@@ -226,7 +226,7 @@ def get_between_phrases(span0, span1, n_min=1, n_max=3):
             phrases.append(build_phrase(sent, i, L))
     return phrases
 
-def get_sentence_phrases(span, n_min=1, n_max=3):
+def get_sentence_phrases(span, n_min=1, n_max=4):
     phrases = []
     k = span.get_word_start()
     sent = span.get_parent()._asdict()

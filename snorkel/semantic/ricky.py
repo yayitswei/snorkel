@@ -71,9 +71,11 @@ lexical_rules.extend(
     [Rule('$LocationNER', w, ('.string', 'LOCATION')) for w in ['location', 'locations', 'place', 'places']] +
     [Rule('$OrganizationNER', w, ('.string', 'ORGANIZATION')) for w in ['organization', 'organizations']] +
     [Rule('$Punctuation', w) for w in ['.', ',', ';', '!', '?']] +
+    [Rule('$Tuple', w, '.tuple') for w in ['pair', 'tuple']] +
     # FIXME: Temporary hardcode
     [Rule('$ChemicalEntity', w, ('.string', 'Chemical')) for w in ['chemical', 'chemicals']] +
-    [Rule('$DiseaseEntity', w, ('.string', 'Disease')) for w in ['disease', 'diseases']]
+    [Rule('$DiseaseEntity', w, ('.string', 'Disease')) for w in ['disease', 'diseases']] +
+    [Rule('$CID', w, '.cid') for w in ['cid', 'cids', 'canonical id', 'canonical ids']]
     # FIXME
     )
 
@@ -119,10 +121,11 @@ unary_rules = [
     Rule('$IntToBool', '$AtLeastOne', sems0),
     # ArgX may be treated as an object or a string (referring to its textual contents)
     Rule('$String', '$ArgX', lambda sems: ('.arg_to_string', sems[0])),
+    Rule('$ArgToString', '$CID', lambda sems: (sems[0],)),
     Rule('$StringList', 'StringListOr', sems0),
     Rule('$StringList', 'StringListAnd', sems0),
     Rule('$List', '$BoolList', sems0),
-    Rule('$List', '$StringList', sems0),
+    Rule('$List', '$StringList', sems0), # Also: UserList ->  StringList -> List
     Rule('$List', '$IntList', sems0),
     Rule('$List', '$TokenList', sems0),
     Rule('$ROOT', '$LF', lambda sems: ('.root', sems[0])),
@@ -271,6 +274,12 @@ compositional_rules = [
     Rule('$PhraseList', '$NER $PhraseList', lambda sems: ('.filter_by_attr', sems[1], ('.string', 'ner_tags'), sems[0])),
     Rule('$TokenList', '$PhraseList', lambda sems: ('.filter_to_tokens', sems[0])),
     Rule('$StringList', '$PhraseList', lambda sems: ('.extract_text', sems[0])),
+
+    Rule('$String', '$ArgToString $ArgX', lambda (func_, arg_): ('.call', func_, arg_)),
+    Rule('$StringListAnd', '$ArgToString $ArgXAnd', lambda (func_, args_): ('.map', func_, args_)),
+    Rule('$StringTuple', '$Tuple $StringListAnd', sems_in_order),
+    Rule('$TupleToBool', '$In $List', sems_in_order),
+    Rule('$Bool', '$StringTuple $TupleToBool', lambda (tup_, func_): ('.call', func_, tup_)),
 ]
 
 snorkel_rules = lexical_rules + unary_rules + compositional_rules
@@ -284,6 +293,7 @@ snorkel_ops = {
     '.string': lambda x: lambda c: x,
     '.int': lambda x: lambda c: x,
     # lists
+    '.tuple': lambda x: lambda c: tuple(x(c)),
     '.list': lambda *x: lambda c: [z(c) for z in x],
     '.user_list': lambda x: lambda c: c['user_lists'][x(c)],
         # apply a function x to elements in list y
@@ -324,6 +334,7 @@ snorkel_ops = {
     '.arg': lambda x: lambda c: c['candidate'][x(c) - 1],
         # NOTE: For ease of testing, temporarily allow tuples of strings in place of legitimate candidates
     '.arg_to_string': lambda x: lambda c: x(c) if isinstance(x(c), basestring) else x(c).get_span(),
+    '.cid': lambda c: lambda arg: lambda cx: arg(cx).get_attrib_tokens(a='entity_cids')[0], # take the first token's CID
     # sets
     '.left': lambda *x: lambda cx: cx['lf_helpers']['get_left_phrases'](*[xi(cx) for xi in x]),
     '.right': lambda *x: lambda cx: cx['lf_helpers']['get_right_phrases'](*[xi(cx) for xi in x]),

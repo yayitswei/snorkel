@@ -465,31 +465,47 @@ cdr_examples = [
     #     explanation=None,
     #     candidate=-130640710948826159,
     #     denotation=-1),
-    # # LF_ctd_marker_c_d
-    # Example(
-    #     explanation=None,
-    #     candidate=3829603392041554457,
-    #     denotation=1),
-    # # LF_ctd_marker_induce
-    # Example(
-    #     explanation=None,
-    #     candidate=-305419566691337972,
-    #     denotation=1),
-    # # LF_ctd_therapy_treat
-    # Example(
-    #     explanation=None,
-    #     candidate=9013931201987912271,
-    #     denotation=-1),
-    # # LF_ctd_unspecified_treat
-    # Example(
-    #     explanation=None,
-    #     candidate=-6222536315024461563,
-    #     denotation=-1),
-    # # LF_ctd_unspecified_induce
-    # Example(
-    #     explanation=None,
-    #     candidate=-249729854237013355,
-    #     denotation=1),
+    # LF_ctd_marker_c_d
+    Example(
+        explanation="""Label true because the disease is immediately after the 
+            chemical and the pair of canonical ids of the chemical and disease 
+            is in ctd_marker""",
+        candidate=3829603392041554457,
+        denotation=1),
+    # LF_ctd_marker_induce
+    Example(
+        explanation="""Label True because 'induced by', 'caused by', or 'due to' 
+            is between the disease and the chemical or the disease is 
+            immediately after the chemical and 'induc' or 'assoc' is in the 
+            chemical and the pair of canonical ids of the chemical and disease 
+            is in ctd_marker""",
+        candidate=-305419566691337972,
+        denotation=1),
+    # LF_ctd_therapy_treat
+    Example(
+        explanation="""Label false because any word between the chemical and 
+            the disease contains a treat word and the chemical is left of the 
+            disease and the pair of canonical ids of the chemical and disease 
+            is in ctd_therapy""",
+        candidate=9013931201987912271,
+        denotation=-1),
+    # LF_ctd_unspecified_treat
+    Example(
+        explanation="""Label false because any word between the chemical and 
+            the disease contains a treat word and the chemical is left of the 
+            disease and the pair of canonical ids of the chemical and disease 
+            is in ctd_unspecified""",
+        candidate=-6222536315024461563,
+        denotation=-1),
+    # LF_ctd_unspecified_induce
+    Example(
+        explanation="""Label true because the disease is immediately after the 
+            chemical and 'induc' or 'assoc' is in the chemical or 'induced by', 
+            'caused by', or 'due to' is between the disease and the chemical 
+            and the pair of canonical ids of the chemical and disease is in 
+            ctd_unspecified""",
+        candidate=-249729854237013355,
+        denotation=1),
     # LF_d_following_c
     Example(
         explanation="""Label true because 'following' is between the disease 
@@ -541,21 +557,24 @@ cdr_examples = [
             'improv'""",
         candidate=4358774324608031121,
         denotation=-1),
-    # # LF_in_ctd_unspecified
-    # Example(
-    #     explanation=None,
-    #     candidate=-5889490471583847150,
-    #     denotation=-1),
-    # # LF_in_ctd_therapy
-    # Example(
-    #     explanation=None,
-    #     candidate=1928996051652884359,
-    #     denotation=-1),
-    # # LF_in_ctd_marker
-    # Example(
-    #     explanation=None,
-    #     candidate=-5889490471583847150,
-    #     denotation=1),
+    # LF_in_ctd_unspecified
+    Example(
+        explanation="""Label false if the pair of canonical ids of the chemical 
+            and disease is in ctd_unspecified""",
+        candidate=-5889490471583847150,
+        denotation=-1),
+    # LF_in_ctd_therapy
+    Example(
+        explanation="""Label false if the pair of canonical ids of the chemical 
+            and disease is in ctd_therapy""",
+        candidate=1928996051652884359,
+        denotation=-1),
+    # LF_in_ctd_marker
+    Example(
+        explanation="""Label true if the pair of canonical ids of the chemical 
+            and disease is in ctd_marker""",
+        candidate=-5889490471583847150,
+        denotation=1),
     # LF_in_patient_with
     Example(
         explanation="""Label false if any patient phrase is within four words 

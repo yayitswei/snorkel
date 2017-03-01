@@ -240,7 +240,7 @@ def get_cdr_lfs():
             dist = chem_start - dis_end
         else:
             dist = dis_start - chem_end
-        # Try to find chemical disease than @dist/8 in either direction
+        # Try to find chemical disease closer than @dist/8 in either direction
         sent = c.get_parent()
         for i in range(chem_end, min(len(sent.words), chem_end + dist / 8)):
             et, cid = sent.entity_types[i], sent.entity_cids[i]

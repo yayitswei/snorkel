@@ -305,8 +305,8 @@ snorkel_ops = {
     '.composite_or':  lambda x, y: lambda cxy: lambda z: lambda cz: any([x(lambda c: yi)(cxy)(z)(cz)==True for yi in y(cxy)]),
     # logic
         # NOTE: and/or expect individual inputs, not/all/any/none expect a single iterable of inputs
-    '.and': lambda *x: lambda c: all(xi(c)==True for xi in x), 
-    '.or': lambda *x: lambda c: any(xi(c)==True for xi in x),
+    '.and': lambda x, y: lambda c: x(c)==True and y(c)==True, 
+    '.or': lambda x, y: lambda c: x(c)==True or y(c)==True,
     '.not': lambda x: lambda c: not x(c)==True,
     '.all': lambda x: lambda c: all(xi==True for xi in x(c)),
     '.any': lambda x: lambda c: any(xi==True for xi in x(c)),
@@ -350,6 +350,49 @@ snorkel_ops = {
     # '.filter_to_alnum': lambda phrlist: lambda c: [p for p in phrlist(c) if any(letter.isalnum() for letter in getattr(p, 'words'))],
     '.filter_to_tokens': lambda phrlist: lambda c: [p for p in phrlist(c) if len(getattr(p, 'words')) == 1],
     }
+
+def sem_to_str(sem):
+    str_ops = {
+        '.root': lambda LF: recurse(LF),
+        '.label': lambda label, cond: "return {} if {} else 0".format(1 if recurse(label)==True else -1, recurse(cond)),
+        '.bool': lambda bool_: bool(bool_),
+        '.string': lambda str_: "'{}'".format(str_),
+        '.int': lambda int_: int(int_),
+        
+        '.tuple': lambda list_: "tuple({})".format(recurse(list_)),
+        '.list': lambda *elements: "[{}]".format(','.join(recurse(x) for x in elements)),
+        '.user_list': lambda name: str(name).upper(),
+        '.map': lambda func_, list_: "map({}, {})".format(recurse(func_), recurse(list_)),
+        '.call': lambda func_, args_: "call({}, {})".format(recurse(func_), recurse(args_)),
+
+        '.and': lambda x, y: "({} and {})".format(recurse(x), recurse(y)),
+        '.or': lambda x, y: "({} or {})".format(recurse(x), recurse(y)),
+        '.not': lambda x: "not ({})".format(recurse(x)),
+        '.all': lambda x: "all({})".format(recurse(x)),
+        '.any': lambda x: "any({})".format(recurse(x)),
+        '.none': lambda x: "not any({})".format(recurse(x)),
+
+        '.arg': lambda int_: "arg{}".format(int_),
+
+        '.in': lambda rhs: "in {}".format(recurse(rhs)),
+
+        '.between': lambda list_: "between({})".format(recurse(list_)),
+
+        '.extract_text': lambda list_: "text({})".format(list_),
+    }
+    def recurse(sem):
+        if isinstance(sem, tuple):
+            if sem[0] in str_ops:
+                op = str_ops[sem[0]]
+                args = [recurse(arg) for arg in sem[1:]]
+                return op(*args) if args else op
+            else:
+                return str(sem)
+        else:
+            return str(sem)
+    return recurse(sem)
+        
+
 
 ### DEPRECATED:
     # indices

@@ -34,13 +34,13 @@ class Grammar(object):
         print('Created grammar with %d rules' % \
             (len(self.lexical_rules) + len(self.unary_rules) + len(self.binary_rules)))
 
-    def parse_input(self, input):
+    def parse_input(self, input, stopwords=[]):
         """
         Returns the list of parses for the given input which can be derived
         using this grammar.
         """
         input = input.lower()
-        tokens = self.corenlp.parse(input)
+        tokens = [t for t in self.corenlp.parse(input) if t['word'] not in stopwords]
         words = [t['word'] for t in tokens]
         self.words = words # TEMP (for print_chart)
         chart = defaultdict(list)

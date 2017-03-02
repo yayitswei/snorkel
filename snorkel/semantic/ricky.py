@@ -17,51 +17,43 @@ def sems_reversed(sems):
     return tuple(reversed(sems))
 
 # Rules ======================================================================
-lexical_rules = [
-    # arg
-    Rule('$Arg', 'arg', '.arg'),
-    Rule('$Arg', 'argument', '.arg'),
-    # logic
-    Rule('$And', 'and', '.and'),
-    # Rule('$AtLeastOne', 'a', ('.geq', ('.int', 1))),
-    Rule('$All', 'all', '.all'),
-    # Rule('$Int', 'a', ('.int', 1)),
-    Rule('$Int', 'no', ('.int', 0)),
-    Rule('$Int', 'immediately', ('.int', 1)),
-    # direction
-    Rule('$Sentence', '?in ?the sentence', '.sentence'),
-    # other
-    Rule('$In', 'in', '.in'),
-    Rule('$Label', 'label ?it', '.label'),
-]
-
-lexical_rules.extend(
+lexical_rules = (
+    [Rule('$Label', w, '.label') for w in ['label ?it']] +
+    [Rule('$Arg', w, '.arg') for w in ['arg', 'argument']] +
     [Rule('$True', w, ('.bool', True)) for w in ['true', 'correct']] +
     [Rule('$False', w, ('.bool', False)) for w in ['false', 'incorrect', 'wrong']] +
+    [Rule('$And', w, '.and') for w in ['and']] +
     [Rule('$Or', w, '.or') for w in ['or', 'nor']] +
-    [Rule('$Any', w, '.any') for w in ['any', 'a']] +
     [Rule('$Not', w, '.not') for w in ['not', "n't"]] +
-    [Rule('$None', w, '.none') for w in ['none', 'not any', 'neither', 'no']] +
+    [Rule('$All', w, '.all') for w in ['all ?of']] +
+    [Rule('$Any', w, '.any') for w in ['any ?of', 'a']] +
+    [Rule('$None', w, '.none') for w in ['none ?of', 'not any', 'neither', 'no']] +
     # [Rule('$Is', w) for w in ['is', 'are', 'be']] +
     [Rule('$Because', w) for w in ['because', 'since', 'if']] +
     [Rule('$Upper', w, '.upper') for w in ['upper', 'uppercase', 'upper case', 'all caps', 'all capitalized']] +
     [Rule('$Lower', w, '.lower') for w in ['lower', 'lowercase', 'lower case']] +
     [Rule('$Capital', w, '.capital') for w in ['capital', 'capitals', 'capitalized']] +
-    [Rule('$Equals', w, '.eq') for w in ['equal', 'equals', '=', '==', 'same', 'identical', 'exactly']] + 
+    [Rule('$Equals', w, '.eq') for w in ['equal ?to', 'equals', '=', '==', 'same', 'identical', 'exactly']] + 
     [Rule('$LessThan', w, '.lt') for w in ['less than', 'smaller than', '<']] +
-    [Rule('$AtMost', w, '.leq') for w in ['at most', 'no larger than', 'less than or equal', 'within', 'no more than', '<=']] +
+    [Rule('$AtMost', w, '.leq') for w in ['at most', 'no larger than', 'less than or equal ?to', 'within', 'no more than', '<=']] +
     [Rule('$AtLeast', w, '.geq') for w in ['at least', 'no less than', 'no smaller than', 'greater than or equal', '>=']] +
     [Rule('$MoreThan', w, '.gt') for w in ['more than', 'greater than', 'larger than', '>']] + 
     [Rule('$Within', w, '.within') for w in ['within']] +
     [Rule('$Exists', w) for w in ['exist', 'exists', 'there']] +
+    [Rule('$Int', w, ('.int', 0)) for w in ['no']] +
+    [Rule('$Int', w,  ('.int', 1)) for w in ['immediately']] +
+    # Rule('$AtLeastOne', 'a', ('.geq', ('.int', 1))),
+    # Rule('$Int', 'a', ('.int', 1)),
+    [Rule('$In', w, '.in') for w in ['in']] +
     [Rule('$Contains', w, '.contains') for w in ['contains', 'contain']] +
     [Rule('$StartsWith', w, '.startswith') for w in ['starts with', 'start with']] +
     [Rule('$EndsWith', w, '.endswith') for w in ['ends with', 'end with']] +
-    [Rule('$Left', w, '.left') for w in ['left', 'before', 'precedes', 'preceding', 'followed by']] +
-    [Rule('$Right', w, '.right') for w in ['right', 'after', 'follows', 'following']] +
+    [Rule('$Left', w, '.left') for w in ['?to ?the left ?of', 'before', 'precedes', 'preceding', 'followed by']] +
+    [Rule('$Right', w, '.right') for w in ['?to ?the right ?of', 'after', 'follows', 'following']] +
+    [Rule('$Sentence', w, '.sentence') for w in ['?in ?the sentence']] +
     [Rule('$Between', w, '.between') for w in ['between', 'inbetween']] +
     [Rule('$Separator', w) for w in [',', ';', '/']] +
-    [Rule('$Count', w, '.count') for w in ['number', 'length', 'count']] +
+    [Rule('$Count', w, '.count') for w in ['number ?of', 'length', 'count']] +
     [Rule('$Word', w, 'words') for w in ['word', 'words', 'term', 'terms', 'phrase', 'phrases']] + 
     [Rule('$Char', w, 'chars') for w in ['character', 'characters', 'letter', 'letters']] + 
     [Rule('$NounPOS', w, ('.string', 'NN')) for w in ['noun', 'nouns']] +
@@ -71,13 +63,13 @@ lexical_rules.extend(
     [Rule('$LocationNER', w, ('.string', 'LOCATION')) for w in ['location', 'locations', 'place', 'places']] +
     [Rule('$OrganizationNER', w, ('.string', 'ORGANIZATION')) for w in ['organization', 'organizations']] +
     [Rule('$Punctuation', w) for w in ['.', ',', ';', '!', '?']] +
-    [Rule('$Tuple', w, '.tuple') for w in ['pair', 'tuple']] +
+    [Rule('$Tuple', w, '.tuple') for w in ['pair ?of', 'tuple ?of']] +
     # FIXME: Temporary hardcode
     [Rule('$ChemicalEntity', w, ('.string', 'Chemical')) for w in ['chemical', 'chemicals']] +
     [Rule('$DiseaseEntity', w, ('.string', 'Disease')) for w in ['disease', 'diseases']] +
-    [Rule('$CID', w, '.cid') for w in ['cid', 'cids', 'canonical id', 'canonical ids']]
+    [Rule('$CID', w, '.cid') for w in ['cid', 'cids', 'canonical id', 'canonical ids ?of']]
     # FIXME
-    )
+)
 
 unary_rules = [
     # FIXME: Temporary hardcode
@@ -140,6 +132,11 @@ compositional_rules = [
     Rule('$Bool', '$All $BoolList', sems_in_order),
     Rule('$Bool', '$Any $BoolList', sems_in_order),
     Rule('$Bool', '$None $BoolList', sems_in_order),
+    
+    # Parentheses
+    Rule('$Bool', '$OpenParen $Bool $CloseParen', lambda (open_, bool_, close_): bool_),
+    # Rule('$StringListAnd', '$OpenParen $StringListAnd $CloseParen', lambda (open_, list_, close_): list_),
+    # Rule('$StringListOr', '$OpenParen $StringListOr $CloseParen', lambda (open_, list_, close_): list_),
 
     ### Strings ###
         # building strings
@@ -373,10 +370,14 @@ def sem_to_str(sem):
         '.none': lambda x: "not any({})".format(recurse(x)),
 
         '.arg': lambda int_: "arg{}".format(int_),
+        '.arg_to_string': lambda arg_: "text({})".format(recurse(arg_)),
+        '.cid': lambda arg_: "cid({})".format(recurse(arg_)),
 
         '.in': lambda rhs: "in {}".format(recurse(rhs)),
+        '.contains': lambda rhs: "contains {}".format(recurse(rhs)),
 
         '.between': lambda list_: "between({})".format(recurse(list_)),
+        '.right': lambda *args_: "right({})".format(','.join(recurse(x) for x in args_)),
 
         '.extract_text': lambda list_: "text({})".format(list_),
     }

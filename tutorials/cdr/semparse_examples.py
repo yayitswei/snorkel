@@ -59,6 +59,12 @@ test_examples = [
         candidate=('foo', 'bar'),
         denotation=1,
         semantics=None),
+    # Parentheses
+    Example(
+        explanation="label True because True or (True and False)",
+        candidate=('foo', 'bar'),
+        denotation=1,
+        semantics=None),
     # Equals (String)
     Example(
         explanation="label True because 'yes' equals 'yes'",
@@ -573,44 +579,53 @@ cdr_examples = [
     # LF_ctd_marker_induce
     Example(
         name='LF_ctd_marker_induce',
-        explanation="""Label True because 'induced by', 'caused by', or 'due to' 
-            is between the disease and the chemical or the disease is 
-            immediately after the chemical and 'induc' or 'assoc' is in the 
-            chemical and the pair of canonical ids of the chemical and disease is in ctd_marker""",
+        explanation="""Label True because
+            (
+                (the disease is immediately after the chemical and the chemical contains 'induc' or 'assoc')
+                or
+                ('induced by', 'caused by', or 'due to' is between the disease and the chemical)
+            )
+            and 
+            (the pair of canonical ids of the chemical and disease is in ctd_marker)""",
         candidate=-305419566691337972,
         denotation=1,
-        semantics=None),
+        semantics=('.root', ('.label', ('.bool', True), ('.and', ('.or', ('.and', ('.call', ('.in', ('.extract_text', ('.right', ('.arg', ('.int', 1)), ('.string', '.eq'), ('.int', 1), ('.string', 'words')))), ('.arg_to_string', ('.arg', ('.int', 2)))), ('.call', ('.composite_or', ('.contains',), ('.list', ('.string', u'induc'), ('.string', u'assoc'))), ('.arg_to_string', ('.arg', ('.int', 1))))), ('.any', ('.map', ('.in', ('.extract_text', ('.between', ('.list', ('.arg', ('.int', 2)), ('.arg', ('.int', 1)))))), ('.list', ('.string', u'induced by'), ('.string', u'caused by'), ('.string', u'due to'))))), ('.call', ('.in', ('.user_list', ('.string', u'ctd_marker'))), ('.tuple', ('.map', ('.cid',), ('.list', ('.arg', ('.int', 1)), ('.arg', ('.int', 2)))))))))),
     # LF_ctd_therapy_treat
     Example(
         name='LF_ctd_therapy_treat',
-        explanation="""Label false because any word between the chemical and 
-            the disease contains a treat word and the chemical is left of the 
-            disease and the pair of canonical ids of the chemical and disease 
-            is in ctd_therapy""",
+        explanation="""Label false because 
+            (any word between the chemical and the disease contains a treat word and the chemical is left of the 
+            disease)
+            and 
+            (the pair of canonical ids of the chemical and disease is in ctd_therapy)""",
         candidate=9013931201987912271,
         denotation=-1,
-        semantics=None),
+        semantics=('.root', ('.label', ('.bool', False), ('.and', ('.and', ('.any', ('.map', ('.composite_or', ('.contains',), ('.user_list', ('.string', u'treat'))), ('.extract_text', ('.between', ('.list', ('.arg', ('.int', 1)), ('.arg', ('.int', 2))))))), ('.call', ('.in', ('.extract_text', ('.left', ('.arg', ('.int', 2))))), ('.arg_to_string', ('.arg', ('.int', 1))))), ('.call', ('.in', ('.user_list', ('.string', u'ctd_therapy'))), ('.tuple', ('.map', ('.cid',), ('.list', ('.arg', ('.int', 1)), ('.arg', ('.int', 2)))))))))),
     # LF_ctd_unspecified_treat
     Example(
         name='LF_ctd_unspecified_treat',
-        explanation="""Label false because any word between the chemical and 
-            the disease contains a treat word and the chemical is left of the 
-            disease and the pair of canonical ids of the chemical and disease 
-            is in ctd_unspecified""",
+        explanation="""Label false because 
+            (any word between the chemical and the disease contains a treat word and the chemical is left of the 
+            disease)
+            and 
+            (the pair of canonical ids of the chemical and disease is in ctd_unspecified)""",
         candidate=-6222536315024461563,
         denotation=-1,
-        semantics=None),
+        semantics=('.root', ('.label', ('.bool', False), ('.and', ('.and', ('.any', ('.map', ('.composite_or', ('.contains',), ('.user_list', ('.string', u'treat'))), ('.extract_text', ('.between', ('.list', ('.arg', ('.int', 1)), ('.arg', ('.int', 2))))))), ('.call', ('.in', ('.extract_text', ('.left', ('.arg', ('.int', 2))))), ('.arg_to_string', ('.arg', ('.int', 1))))), ('.call', ('.in', ('.user_list', ('.string', u'ctd_unspecified'))), ('.tuple', ('.map', ('.cid',), ('.list', ('.arg', ('.int', 1)), ('.arg', ('.int', 2)))))))))),
     # LF_ctd_unspecified_induce
     Example(
         name='LF_ctd_unspecified_induce',
-        explanation="""Label true because the disease is immediately after the 
-            chemical and 'induc' or 'assoc' is in the chemical or 'induced by', 
-            'caused by', or 'due to' is between the disease and the chemical 
-            and the pair of canonical ids of the chemical and disease is in 
-            ctd_unspecified""",
+        explanation="""Label True because
+            (
+                (the disease is immediately after the chemical and the chemical contains 'induc' or 'assoc')
+                or
+                ('induced by', 'caused by', or 'due to' is between the disease and the chemical)
+            )
+            and 
+            (the pair of canonical ids of the chemical and disease is in ctd_unspecified)""",
         candidate=-249729854237013355,
         denotation=1,
-        semantics=None),
+        semantics=('.root', ('.label', ('.bool', True), ('.and', ('.or', ('.and', ('.call', ('.in', ('.extract_text', ('.right', ('.arg', ('.int', 1)), ('.string', '.eq'), ('.int', 1), ('.string', 'words')))), ('.arg_to_string', ('.arg', ('.int', 2)))), ('.call', ('.composite_or', ('.contains',), ('.list', ('.string', u'induc'), ('.string', u'assoc'))), ('.arg_to_string', ('.arg', ('.int', 1))))), ('.any', ('.map', ('.in', ('.extract_text', ('.between', ('.list', ('.arg', ('.int', 2)), ('.arg', ('.int', 1)))))), ('.list', ('.string', u'induced by'), ('.string', u'caused by'), ('.string', u'due to'))))), ('.call', ('.in', ('.user_list', ('.string', u'ctd_unspecified'))), ('.tuple', ('.map', ('.cid',), ('.list', ('.arg', ('.int', 1)), ('.arg', ('.int', 2)))))))))),
     # LF_d_following_c
     Example(
         name='LF_d_following_c',

@@ -806,9 +806,9 @@ cdr_examples = [
 
 
 def get_examples(which, candidates):
-    if which=='test':
+    if which=='semparse_test':
         examples = test_examples
-    elif which=='spouse':
+    elif which=='semparse_spouse':
         examples = spouse_examples
     elif which=='semparse_cdr':
         examples = cdr_examples

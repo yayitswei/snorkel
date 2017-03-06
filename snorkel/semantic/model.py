@@ -8,8 +8,11 @@ from snorkel.models import Document, Sentence, candidate_subclass
 from snorkel.parser import CorpusParser, TSVDocPreprocessor, XMLMultiDocPreprocessor
 from snorkel.candidates import Ngrams, CandidateExtractor, PretaggedCandidateExtractor
 from snorkel.matchers import PersonMatcher
-from snorkel.annotations import FeatureAnnotator, LabelAnnotator, save_marginals, load_gold_labels
-from snorkel.learning import GenerativeModel
+from snorkel.annotations import (FeatureAnnotator, LabelAnnotator, 
+    save_marginals, load_marginals, load_gold_labels)
+from snorkel.learning import GenerativeModel, SparseLogisticRegression
+from snorkel.learning import RandomSearch, ListParameter, RangeParameter
+from snorkel.learning.utils import MentionScorer
 from snorkel.learning.structure import DependencySelector
 
 # Python
@@ -122,6 +125,7 @@ class CDRModel(SnorkelModel):
                 assert(nCandidates == self.nCandidates[split])
                 if self.verbose:
                     print("Featurized split {}: ({},{}) sparse matrix".format(split, nCandidates, nFeatures))
+        self.featurizer = featurizer
 
     def label(self, lfs='py'):
         if lfs == 'py':
@@ -175,16 +179,17 @@ class CDRModel(SnorkelModel):
                         L_dev = L
                         L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
                         print(L_dev.lf_stats(session, L_gold_dev, gen_model.weights.lf_accuracy()))
+        self.labeler = labeler
 
     def generative(self, model_dep=False, threshold=(1.0/3.0)):
-        raise NotImplementedError
-        
         if model_dep:
             ds = DependencySelector()
             deps = ds.select(L_train, threshold=threshold)
         else:
             deps = ()
         
+        L_train = self.labeler.load_matrix(self.session, split=TRAIN)
+
         gen_model = GenerativeModel(lf_propensity=True)
         gen_model.train(
             L_train, deps=deps, epochs=20, decay=0.95, 
@@ -196,8 +201,31 @@ class CDRModel(SnorkelModel):
             plt.hist(train_marginals, bins=20)
             plt.show()
 
-        save_marginals(session, L_train, train_marginals)
+        save_marginals(self.session, L_train, train_marginals)
 
-    def discriminative(self):
-        raise NotImplementedError
+    def discriminative(self, model='logreg'):
 
+        train_marginals = load_marginals(self.session, split=TRAIN)
+
+        L_gold_train = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
+        L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
+
+        if model=='logreg':
+            F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
+            F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
+            
+            rate_param = RangeParameter('lr', 1e-6, 1e-2, step=1, log_base=10)
+            l1_param  = RangeParameter('l1_penalty', 1e-6, 1e-2, step=1, log_base=10)
+            l2_param  = RangeParameter('l2_penalty', 1e-6, 1e-2, step=1, log_base=10)
+        
+            disc_model = SparseLogisticRegression()
+            searcher = RandomSearch(self.session, disc_model, F_train, train_marginals, 
+                                    [rate_param, l1_param, l2_param], n=20)
+
+            print("Random Search:")
+            search_stats = searcher.fit(F_dev, L_gold_dev, n_epochs=50, rebalance=True, print_freq=25)
+            if verbose:
+                print(search_stats)
+
+        print("Evaluation:")
+        TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev)

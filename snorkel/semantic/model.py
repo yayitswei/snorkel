@@ -117,7 +117,7 @@ class CDRModel(SnorkelModel):
 
         candidate_extractor = PretaggedCandidateExtractor(self.candidate_class, ['Chemical', 'Disease'])
         for split, sents in enumerate([train_sents, dev_sents, test_sents]):
-            if len(sents) > 0:
+            if len(sents) > 0 and split < self.splits:
                 SnorkelModel.extract(self, candidate_extractor, sents, split=split, clear=clear)
                 nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
                 if self.verbose:
@@ -229,54 +229,54 @@ class CDRModel(SnorkelModel):
             (lf1, lf2, d) = dep
             print('{:10}: ({}, {})'.format(d, lf1, lf2))
 
-def get_lfs(source, include=[], remove_paren=True):
-        if source == 'py':
-            LFs = get_cdr_lfs()
-        elif source == 'nl':
-            with bz2.BZ2File('data/ctd.pkl.bz2', 'rb') as ctd_f:
-                ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
-            user_lists = {
-                'uncertain': ['combin', 'possible', 'unlikely'],
-                'causal': ['causes', 'caused', 'induce', 'induces', 'induced', 'associated with'],
-                'treat': ['treat', 'effective', 'prevent', 'resistant', 'slow', 'promise', 'therap'],
-                'procedure': ['inject', 'administrat'],
-                'patient': ['in a patient with', 'in patients with'],
-                'weak': ['none', 'although', 'was carried out', 'was conducted', 'seems', 
-                        'suggests', 'risk', 'implicated', 'the aim', 'to investigate',
-                        'to assess', 'to study'],
-                'ctd_unspecified': ctd_unspecified,
-                'ctd_therapy': ctd_therapy,
-                'ctd_marker': ctd_marker,
-            }
-            train_cands = self.session.query(self.candidate_class).filter(self.candidate_class.split == 0).all()
-            examples = get_examples('semparse_cdr', train_cands)
-            sp = SemanticParser(self.candidate_class, user_lists)
-            sp.evaluate(examples,
-                        show_everything=False,
-                        show_explanation=False,
-                        show_candidate=False,
-                        show_sentence=False,
-                        show_parse=False,
-                        show_passing=False,
-                        show_correct=False,
-                        pseudo_python=False,
-                        remove_paren=remove_paren,
-                        only=[])
-            (correct, passing, failing, redundant, erroring, unknown) = sp.LFs
-            LFs = []
-            if 'correct' in include:
-                LFs += correct
-            if 'passing' in include:
-                LFs += passing
-            if 'failing' in include:
-                LFs += failing
-            if 'redundant' in include:
-                LFs += redundant
-            if 'erroring' in include:
-                LFs += erroring
-            if 'unknown' in include:
-                LFs += unknown
-            LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
-        else:
-            raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
-        return LFs
+    def get_lfs(self, source, include=[], remove_paren=True):
+            if source == 'py':
+                LFs = get_cdr_lfs()
+            elif source == 'nl':
+                with bz2.BZ2File('data/ctd.pkl.bz2', 'rb') as ctd_f:
+                    ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
+                user_lists = {
+                    'uncertain': ['combin', 'possible', 'unlikely'],
+                    'causal': ['causes', 'caused', 'induce', 'induces', 'induced', 'associated with'],
+                    'treat': ['treat', 'effective', 'prevent', 'resistant', 'slow', 'promise', 'therap'],
+                    'procedure': ['inject', 'administrat'],
+                    'patient': ['in a patient with', 'in patients with'],
+                    'weak': ['none', 'although', 'was carried out', 'was conducted', 'seems', 
+                            'suggests', 'risk', 'implicated', 'the aim', 'to investigate',
+                            'to assess', 'to study'],
+                    'ctd_unspecified': ctd_unspecified,
+                    'ctd_therapy': ctd_therapy,
+                    'ctd_marker': ctd_marker,
+                }
+                train_cands = self.session.query(self.candidate_class).filter(self.candidate_class.split == 0).all()
+                examples = get_examples('semparse_cdr', train_cands)
+                sp = SemanticParser(self.candidate_class, user_lists)
+                sp.evaluate(examples,
+                            show_everything=False,
+                            show_explanation=False,
+                            show_candidate=False,
+                            show_sentence=False,
+                            show_parse=False,
+                            show_passing=False,
+                            show_correct=False,
+                            pseudo_python=False,
+                            remove_paren=remove_paren,
+                            only=[])
+                (correct, passing, failing, redundant, erroring, unknown) = sp.LFs
+                LFs = []
+                if 'correct' in include:
+                    LFs += correct
+                if 'passing' in include:
+                    LFs += passing
+                if 'failing' in include:
+                    LFs += failing
+                if 'redundant' in include:
+                    LFs += redundant
+                if 'erroring' in include:
+                    LFs += erroring
+                if 'unknown' in include:
+                    LFs += unknown
+                LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
+            else:
+                raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
+            return LFs

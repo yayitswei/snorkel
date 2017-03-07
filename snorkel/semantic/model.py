@@ -13,12 +13,13 @@ from snorkel.annotations import (FeatureAnnotator, LabelAnnotator,
     save_marginals, load_marginals, load_gold_labels)
 from snorkel.learning import GenerativeModel, SparseLogisticRegression
 from snorkel.learning import RandomSearch, ListParameter, RangeParameter
-from snorkel.learning.utils import MentionScorer
+from snorkel.learning.utils import MentionScorer, training_set_summary_stats
 from snorkel.learning.structure import DependencySelector
 from snorkel.semantic import SemanticParser
 
 # Python
 from pprint import pprint
+import numpy as np
 import matplotlib.pyplot as plt
 import os
 import csv
@@ -134,38 +135,42 @@ class CDRModel(SnorkelModel):
             F = SnorkelModel.featurize(self, featurizer, split)
             nCandidates, nFeatures = F.shape
             if self.verbose:
-                print("Featurized split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nFeatures, F.nnz))
+                print("\nFeaturized split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nFeatures, F.nnz))
         self.featurizer = featurizer
 
     def label(self, LFs):
-        self.LFs = LFs
         labeler = LabelAnnotator(f=self.LFs)
         for split in range(self.splits):
             L = SnorkelModel.label(self, labeler, split)
             nCandidates, nLabels = L.shape
             if self.verbose:
-                print("Labeled split {}: ({},{}) sparse (nnz = {})".format(TRAIN, nCandidates, nLabels, L.nnz))
+                print("\nLabeled split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nLabels, L.nnz))
+                training_set_summary_stats(L, return_vals=False, verbose=True)
         self.labeler = labeler
 
-    def generative(self, lfs='py', train_acc=False, model_dep=False, threshold=(1.0/3.0)):
+    def generative(self, lfs='py', train_acc=False, model_dep=False, majority_vote=False, threshold=(1.0/3.0)):
         if not self.labeler:
             self.labeler = LabelAnnotator(f=self.LFs)
         L_train = self.labeler.load_matrix(self.session, split=TRAIN)
         
-        if model_dep:
-            ds = DependencySelector()
-            deps = ds.select(L_train, threshold=threshold)
-            if self.verbose:
-                self.display_dependencies(deps)
+        if majority_vote:
+            train_marginals = np.asarray(np.sign(np.sum(L_train, axis=1))).reshape(-1)
         else:
-            deps = ()
-    
-        gen_model = GenerativeModel(lf_propensity=True)
-        gen_model.train(
-            L_train, deps=deps, epochs=20, decay=0.95, 
-            step_size=0.1/L_train.shape[0], init_acc=2.0, reg_param=0.0)
+            if model_dep:
+                ds = DependencySelector()
+                deps = ds.select(L_train, threshold=threshold)
+                if self.verbose:
+                    self.display_dependencies(deps)
+            else:
+                deps = ()
+        
+            gen_model = GenerativeModel(lf_propensity=True)
+            gen_model.train(
+                L_train, deps=deps, epochs=20, decay=0.95, 
+                step_size=0.1/L_train.shape[0], init_acc=2.0, reg_param=0.0)
 
-        train_marginals = gen_model.marginals(L_train)
+            train_marginals = gen_model.marginals(L_train)
+
         save_marginals(self.session, L_train, train_marginals)
 
         if self.verbose:
@@ -174,7 +179,7 @@ class CDRModel(SnorkelModel):
             plt.show()
             
         # Display LF accuracies
-        if self.labeler:
+        if self.labeler and not majority_vote:
             if train_acc:
                 L = self.labeler.load_matrix(self.session, split=TRAIN)
                 L_gold = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
@@ -231,53 +236,54 @@ class CDRModel(SnorkelModel):
             print('{:16}: ({}, {})'.format(d, lf1, lf2))
 
     def get_lfs(self, source, include=[], remove_paren=True):
-            if source == 'py':
-                LFs = get_cdr_lfs()
-            elif source == 'nl':
-                with bz2.BZ2File('data/ctd.pkl.bz2', 'rb') as ctd_f:
-                    ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
-                user_lists = {
-                    'uncertain': ['combin', 'possible', 'unlikely'],
-                    'causal': ['causes', 'caused', 'induce', 'induces', 'induced', 'associated with'],
-                    'treat': ['treat', 'effective', 'prevent', 'resistant', 'slow', 'promise', 'therap'],
-                    'procedure': ['inject', 'administrat'],
-                    'patient': ['in a patient with', 'in patients with'],
-                    'weak': ['none', 'although', 'was carried out', 'was conducted', 'seems', 
-                            'suggests', 'risk', 'implicated', 'the aim', 'to investigate',
-                            'to assess', 'to study'],
-                    'ctd_unspecified': ctd_unspecified,
-                    'ctd_therapy': ctd_therapy,
-                    'ctd_marker': ctd_marker,
-                }
-                train_cands = self.session.query(self.candidate_class).filter(self.candidate_class.split == 0).all()
-                examples = get_examples('semparse_cdr', train_cands)
-                sp = SemanticParser(self.candidate_class, user_lists)
-                sp.evaluate(examples,
-                            show_everything=False,
-                            show_explanation=False,
-                            show_candidate=False,
-                            show_sentence=False,
-                            show_parse=False,
-                            show_passing=False,
-                            show_correct=False,
-                            pseudo_python=False,
-                            remove_paren=remove_paren,
-                            only=[])
-                (correct, passing, failing, redundant, erroring, unknown) = sp.LFs
-                LFs = []
-                if 'correct' in include:
-                    LFs += correct
-                if 'passing' in include:
-                    LFs += passing
-                if 'failing' in include:
-                    LFs += failing
-                if 'redundant' in include:
-                    LFs += redundant
-                if 'erroring' in include:
-                    LFs += erroring
-                if 'unknown' in include:
-                    LFs += unknown
-                LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
-            else:
-                raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
-            return LFs
+        if source == 'py':
+            LFs = get_cdr_lfs()
+        elif source == 'nl':
+            with bz2.BZ2File('data/ctd.pkl.bz2', 'rb') as ctd_f:
+                ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
+            user_lists = {
+                'uncertain': ['combin', 'possible', 'unlikely'],
+                'causal': ['causes', 'caused', 'induce', 'induces', 'induced', 'associated with'],
+                'treat': ['treat', 'effective', 'prevent', 'resistant', 'slow', 'promise', 'therap'],
+                'procedure': ['inject', 'administrat'],
+                'patient': ['in a patient with', 'in patients with'],
+                'weak': ['none', 'although', 'was carried out', 'was conducted', 'seems', 
+                        'suggests', 'risk', 'implicated', 'the aim', 'to investigate',
+                        'to assess', 'to study'],
+                'ctd_unspecified': ctd_unspecified,
+                'ctd_therapy': ctd_therapy,
+                'ctd_marker': ctd_marker,
+            }
+            train_cands = self.session.query(self.candidate_class).filter(self.candidate_class.split == 0).all()
+            examples = get_examples('semparse_cdr', train_cands)
+            sp = SemanticParser(self.candidate_class, user_lists)
+            sp.evaluate(examples,
+                        show_everything=False,
+                        show_explanation=False,
+                        show_candidate=False,
+                        show_sentence=False,
+                        show_parse=False,
+                        show_passing=False,
+                        show_correct=False,
+                        pseudo_python=False,
+                        remove_paren=remove_paren,
+                        only=[])
+            (correct, passing, failing, redundant, erroring, unknown) = sp.LFs
+            LFs = []
+            if 'correct' in include:
+                LFs += correct
+            if 'passing' in include:
+                LFs += passing
+            if 'failing' in include:
+                LFs += failing
+            if 'redundant' in include:
+                LFs += redundant
+            if 'erroring' in include:
+                LFs += erroring
+            if 'unknown' in include:
+                LFs += unknown
+            LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
+        else:
+            raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
+        self.LFs = LFs
+        return LFs

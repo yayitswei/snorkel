@@ -112,6 +112,13 @@ def matrix_fn(L, labels):
         np.sum(np.ravel((L[:, j] == -1).todense()) * (labels == 1)) for j in xrange(L.shape[1])
     ])
 
+def corpus_coverage(L):
+    """
+    Given an N x M matrix where L_{i,j} is the label given by the jth LF to the ith candidate:
+    Return the **fraction of candidates that were labeled by at least one LF.**
+    """
+    return sum(np.ravel(sparse_abs(L).sum(axis=1) != 0)) / np.float(L.shape[0])
+
 def get_as_dict(x):
     """Return an object as a dictionary of its attributes"""
     if isinstance(x, dict):

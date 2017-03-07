@@ -134,7 +134,7 @@ class CDRModel(SnorkelModel):
             F = SnorkelModel.featurize(self, featurizer, split)
             nCandidates, nFeatures = F.shape
             if self.verbose:
-                print("Featurized split {}: ({},{}) sparse matrix".format(split, nCandidates, nFeatures))
+                print("Featurized split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nFeatures, F.nnz))
         self.featurizer = featurizer
 
     def label(self, LFs):
@@ -144,7 +144,7 @@ class CDRModel(SnorkelModel):
             L = SnorkelModel.label(self, labeler, split)
             nCandidates, nLabels = L.shape
             if self.verbose:
-                print("Labeled split {}: ({},{}) sparse matrix (nnz = {})".format(TRAIN, nCandidates, nLabels, L.nnz))
+                print("Labeled split {}: ({},{}) sparse (nnz = {})".format(TRAIN, nCandidates, nLabels, L.nnz))
         self.labeler = labeler
 
     def generative(self, lfs='py', train_acc=False, model_dep=False, threshold=(1.0/3.0)):
@@ -206,6 +206,7 @@ class CDRModel(SnorkelModel):
             print("\nRandom Search:")
             F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
             search_stats = searcher.fit(F_dev, L_gold_dev, n_epochs=50, rebalance=True, print_freq=25)
+
             if self.verbose:
                 print(search_stats)
 
@@ -227,7 +228,7 @@ class CDRModel(SnorkelModel):
             deps_decoded.append((LF_names[lfs[0]], LF_names[lfs[1]], dep_names[d]))
         for dep in sorted(list(set(deps_decoded))):
             (lf1, lf2, d) = dep
-            print('{:10}: ({}, {})'.format(d, lf1, lf2))
+            print('{:16}: ({}, {})'.format(d, lf1, lf2))
 
     def get_lfs(self, source, include=[], remove_paren=True):
             if source == 'py':

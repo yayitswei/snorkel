@@ -5,14 +5,13 @@ from annotator import *
 from pandas import DataFrame, Series
 
 class SemanticParser():
-    def __init__(self, candidate_class, user_lists={}, absorb=True):
+    def __init__(self, candidate_class, user_lists={}):
         annotators = [TokenAnnotator(), PunctuationAnnotator(), IntegerAnnotator()]
         self.grammar = Grammar(rules=snorkel_rules, 
                                ops=snorkel_ops, 
                                candidate_class=candidate_class,
                                user_lists=user_lists,
-                               annotators=annotators,
-                               absorb=absorb)
+                               annotators=annotators)
         self.explanation_counter = 0
         self.LFs = tuple([None] * 6)
         self.stopwords = (['is', 'are', 'be', 'comes', 'appears', 'occurs',
@@ -72,6 +71,8 @@ class SemanticParser():
                 show_erroring=False,
                 show_unknown=False,
                 pseudo_python=False,
+                absorb=False,
+                remove_paren=False,
                 only=[]):
         """Returns a pandas DataFrame with the explanations and various per-explanation stats"""
         if show_everything:
@@ -113,8 +114,12 @@ class SemanticParser():
             if show_sentence:
                 print("SENTENCE: {}\n".format(example.candidate[0].get_parent()._asdict()['text']))
             semantics = set()
+            explanation = example.explanation
+            if remove_paren:
+                explanation = explanation.replace('(', '')
+                explanation = explanation.replace(')', '')
             parses = self.parse(
-                        example.explanation, 
+                        explanation, 
                         example.name,
                         verbose=False, 
                         return_parses=True)

@@ -136,7 +136,7 @@ class CDRModel(SnorkelModel):
                 print("Featurized split {}: ({},{}) sparse matrix".format(split, nCandidates, nFeatures))
         self.featurizer = featurizer
     
-    def _get_LFs(self, source):
+    def _get_LFs(self, source, include=[], remove_paren=True):
         if source == 'py':
             LFs = get_cdr_lfs()
         elif source == 'nl':
@@ -158,26 +158,39 @@ class CDRModel(SnorkelModel):
             train_cands = self.session.query(self.candidate_class).filter(self.candidate_class.split == 0).all()
             examples = get_examples('semparse_cdr', train_cands)
             sp = SemanticParser(self.candidate_class, user_lists)
-            sp.evaluate(examples,\
-                        show_everything=False,\
-                        show_explanation=False,\
-                        show_candidate=False,\
-                        show_sentence=False,\
-                        show_parse=False,\
-                        show_passing=False,\
-                        show_correct=False,\
-                        pseudo_python=False,\
+            sp.evaluate(examples,
+                        show_everything=False,
+                        show_explanation=False,
+                        show_candidate=False,
+                        show_sentence=False,
+                        show_parse=False,
+                        show_passing=False,
+                        show_correct=False,
+                        pseudo_python=False,
+                        remove_paren=remove_paren,
                         only=[])
             (correct, passing, failing, redundant, erroring, unknown) = sp.LFs
-            LFs = correct
+            LFs = []
+            if 'correct' in include:
+                LFs += correct
+            if 'passing' in include:
+                LFs += passing
+            if 'failing' in include:
+                LFs += failing
+            if 'redundant' in include:
+                LFs += redundant
+            if 'erroring' in include:
+                LFs += erroring
+            if 'unknown' in include:
+                LFs += unknown
             LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
         else:
             raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
         return LFs
 
-    def label(self, source='py'):
-        LFs = self._get_LFs(source)
-        labeler = LabelAnnotator(f=LFs)
+    def label(self, source='py', include=['correct', 'passing'], remove_paren=True):
+        self.LFs = self._get_LFs(source, include=include, remove_paren=remove_paren)
+        labeler = LabelAnnotator(f=self.LFs)
         for split in range(self.splits):
             L = SnorkelModel.label(self, labeler, split)
             nCandidates, nLabels = L.shape

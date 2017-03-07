@@ -175,7 +175,7 @@ class CDRModel(SnorkelModel):
             raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
         return LFs
 
-    def label(self, source='py', ):
+    def label(self, source='py'):
         LFs = self._get_LFs(source)
         labeler = LabelAnnotator(f=LFs)
         for split in range(self.splits):

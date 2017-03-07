@@ -77,9 +77,7 @@ class csr_LabelMatrix(csr_AnnotationMatrix):
             fp = matrix_fp(self, ls)
             fn = matrix_fn(self, ls)
             tn = matrix_tn(self, ls)
-            denom = (tp+tn+fp+fn)
-            denom[denom==0] = 1 # Prevent divide by 0 errors
-            ac = (tp+tn).astype(float) / denom
+            ac = (tp+tn).astype(float) / (tp+tn+fp+fn)
             d['Empirical Acc.'] = Series(data=ac, index=lf_names)
             d['TP']             = Series(data=tp, index=lf_names)
             d['FP']             = Series(data=fp, index=lf_names)

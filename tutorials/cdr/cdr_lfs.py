@@ -273,6 +273,7 @@ def get_cdr_lfs():
         LF_far_c_d,
         LF_far_d_c,
         LF_improve_before_disease,
+        LF_in_ctd_unspecified,
         LF_in_ctd_therapy,
         LF_in_ctd_marker,
         LF_in_patient_with,

@@ -175,7 +175,7 @@ class CDRModel(SnorkelModel):
             raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
         return LFs
 
-    def label(self, source='py'):
+    def label(self, source='py', ):
         LFs = self._get_LFs(source)
         labeler = LabelAnnotator(f=LFs)
         for split in range(self.splits):
@@ -185,15 +185,15 @@ class CDRModel(SnorkelModel):
                 print("Labeled split {}: ({},{}) sparse matrix (nnz = {})".format(TRAIN, nCandidates, nLabels, L.nnz))
         self.labeler = labeler
 
-    def generative(self, lfs='py', model_dep=False, threshold=(1.0/3.0)):
+    def generative(self, lfs='py', train_acc=False, model_dep=False, threshold=(1.0/3.0)):
+        L_train = self.labeler.load_matrix(self.session, split=TRAIN)
+        
         if model_dep:
             ds = DependencySelector()
             deps = ds.select(L_train, threshold=threshold)
         else:
             deps = ()
     
-        L_train = self.labeler.load_matrix(self.session, split=TRAIN)
-
         gen_model = GenerativeModel(lf_propensity=True)
         gen_model.train(
             L_train, deps=deps, epochs=20, decay=0.95, 
@@ -208,9 +208,13 @@ class CDRModel(SnorkelModel):
             plt.show()
             
         # Display LF accuracies
-        L_dev = self.labeler.load_matrix(self.session, split=DEV)
-        L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
-        self.LF_stats = L_dev.lf_stats(self.session, L_gold_dev, gen_model.weights.lf_accuracy())
+        if train_acc:
+            L = self.labeler.load_matrix(self.session, split=TRAIN)
+            L_gold = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
+        else:
+            L = self.labeler.load_matrix(self.session, split=DEV)
+            L_gold = load_gold_labels(self.session, annotator_name='gold', split=DEV)
+        self.LF_stats = L.lf_stats(self.session, L_gold, gen_model.weights.lf_accuracy())
 
     def discriminative(self, model='logreg', search_n=20):
 

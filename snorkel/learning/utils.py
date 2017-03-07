@@ -457,6 +457,13 @@ def LF_accuracies(L, labels):
     """
     return np.ravel(0.5*(L.T.dot(labels) / sparse_abs(L).sum(axis=0) + 1))
 
+def candidate_redundancy(L):
+    """
+    Given an N x M matrix where L_{i,j} is the label given by the jth LF to the ith candidate:
+    Return the **average number of labels per candidate.**
+    """
+    return np.sum(sparse_abs(L)) / float(L.shape[0])
+
 
 def training_set_summary_stats(L, return_vals=True, verbose=False):
     """
@@ -464,7 +471,10 @@ def training_set_summary_stats(L, return_vals=True, verbose=False):
     Return simple summary statistics
     """
     N, M = L.shape
-    coverage, overlap, conflict = candidate_coverage(L), candidate_overlap(L), candidate_conflict(L)
+    coverage = candidate_coverage(L)
+    overlap = candidate_overlap(L)
+    conflict= candidate_conflict(L)
+    redundancy = candidate_redundancy(L)
     if verbose:
         print "=" * 60
         print "LF Summary Statistics: %s LFs applied to %s candidates" % (M, N)
@@ -472,9 +482,10 @@ def training_set_summary_stats(L, return_vals=True, verbose=False):
         print "Coverage (candidates w/ > 0 labels):\t\t%0.2f%%" % (coverage*100,)
         print "Overlap (candidates w/ > 1 labels):\t\t%0.2f%%" % (overlap*100,)
         print "Conflict (candidates w/ conflicting labels):\t%0.2f%%" % (conflict*100,)
+        print "Redundancy (labels per candidate (avg)):\t%0.1f" % (redundancy,)
         print "=" * 60
     if return_vals:
-        return coverage, overlap, conflict
+        return coverage, overlap, conflict, redundancy
 
 
 def log_odds(p):

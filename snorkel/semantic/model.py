@@ -138,104 +138,7 @@ class CDRModel(SnorkelModel):
                 print("\nFeaturized split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nFeatures, F.nnz))
         self.featurizer = featurizer
 
-    def label(self, LFs):
-        labeler = LabelAnnotator(f=self.LFs)
-        for split in range(self.splits):
-            L = SnorkelModel.label(self, labeler, split)
-            nCandidates, nLabels = L.shape
-            if self.verbose:
-                print("\nLabeled split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nLabels, L.nnz))
-                training_set_summary_stats(L, return_vals=False, verbose=True)
-        self.labeler = labeler
-
-    def generative(self, lfs='py', train_acc=False, model_dep=False, majority_vote=False, threshold=(1.0/3.0)):
-        if not self.labeler:
-            self.labeler = LabelAnnotator(f=self.LFs)
-        L_train = self.labeler.load_matrix(self.session, split=TRAIN)
-        
-        if majority_vote:
-            train_marginals = np.asarray(np.sign(np.sum(L_train, axis=1))).reshape(-1)
-        else:
-            if model_dep:
-                ds = DependencySelector()
-                deps = ds.select(L_train, threshold=threshold)
-                if self.verbose:
-                    self.display_dependencies(deps)
-            else:
-                deps = ()
-        
-            gen_model = GenerativeModel(lf_propensity=True)
-            gen_model.train(
-                L_train, deps=deps, epochs=20, decay=0.95, 
-                step_size=0.1/L_train.shape[0], init_acc=2.0, reg_param=0.0)
-
-            train_marginals = gen_model.marginals(L_train)
-
-        save_marginals(self.session, L_train, train_marginals)
-
-        if self.verbose:
-            # Display marginals
-            plt.hist(train_marginals, bins=20)
-            plt.show()
-            
-        # Display LF accuracies
-        if self.labeler and not majority_vote:
-            if train_acc:
-                L = self.labeler.load_matrix(self.session, split=TRAIN)
-                L_gold = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
-            else:
-                L = self.labeler.load_matrix(self.session, split=DEV)
-                L_gold = load_gold_labels(self.session, annotator_name='gold', split=DEV)
-            self.LF_stats = L.lf_stats(self.session, L_gold, gen_model.weights.lf_accuracy())
-
-    def discriminative(self, model='logreg', search_n=20):
-
-        train_marginals = load_marginals(self.session, split=TRAIN)
-
-        # L_gold_train = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
-        L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
-
-        if model=='logreg':
-            if not self.featurizer:
-                self.featurizer = FeatureAnnotator()
-            F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
-
-            rate_param = RangeParameter('lr', 1e-6, 1e-2, step=1, log_base=10)
-            l1_param  = RangeParameter('l1_penalty', 1e-6, 1e-2, step=1, log_base=10)
-            l2_param  = RangeParameter('l2_penalty', 1e-6, 1e-2, step=1, log_base=10)
-        
-            disc_model = SparseLogisticRegression()
-            searcher = RandomSearch(self.session, disc_model, F_train, train_marginals, 
-                                    [rate_param, l1_param, l2_param], n=search_n)
-
-            print("\nRandom Search:")
-            F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
-            search_stats = searcher.fit(F_dev, L_gold_dev, n_epochs=50, rebalance=True, print_freq=25)
-
-            if self.verbose:
-                print(search_stats)
-
-            print("\nEvaluation:")
-            TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev)
-
-    def display_dependencies(self, deps_encoded):
-        dep_names = {
-            0: 'DEP_SIMILAR',
-            1: 'DEP_FIXING',
-            2: 'DEP_REINFORCING',
-            3: 'DEP_EXCLUSIVE',
-        }
-        LF_names = {i:lf.__name__ for i, lf in enumerate(self.LFs)}
-        deps_decoded = []
-        for dep in deps_encoded:
-            (lf1, lf2, d) = dep
-            lfs = sorted([lf1, lf2])
-            deps_decoded.append((LF_names[lfs[0]], LF_names[lfs[1]], dep_names[d]))
-        for dep in sorted(list(set(deps_decoded))):
-            (lf1, lf2, d) = dep
-            print('{:16}: ({}, {})'.format(d, lf1, lf2))
-
-    def get_lfs(self, source, include=[], remove_paren=True):
+    def generate_lfs(self, source='py', include=[], remove_paren=True):
         if source == 'py':
             LFs = get_cdr_lfs()
         elif source == 'nl':
@@ -286,4 +189,114 @@ class CDRModel(SnorkelModel):
         else:
             raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
         self.LFs = LFs
-        return LFs
+
+    def label(self):
+        labeler = LabelAnnotator(f=self.LFs)
+        for split in range(self.splits):
+            L = SnorkelModel.label(self, labeler, split)
+            nCandidates, nLabels = L.shape
+            if self.verbose:
+                print("\nLabeled split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nLabels, L.nnz))
+                training_set_summary_stats(L, return_vals=False, verbose=True)
+        self.labeler = labeler
+
+    def generative(self, lfs='py', train_acc=False, model_dep=False, majority_vote=False, threshold=(1.0/3.0)):
+        if not self.labeler:
+            self.labeler = LabelAnnotator(f=self.LFs)
+        L_train = self.labeler.load_matrix(self.session, split=TRAIN)
+        
+        if majority_vote:
+            train_marginals = np.where(np.ravel(np.sum(L_train, axis=1)) <= 0, 0.0, 1.0)
+        else:
+            if model_dep:
+                ds = DependencySelector()
+                deps = ds.select(L_train, threshold=threshold)
+                if self.verbose:
+                    self.display_dependencies(deps)
+            else:
+                deps = ()
+        
+            gen_model = GenerativeModel(lf_propensity=True)
+            gen_model.train(
+                L_train, deps=deps, epochs=20, decay=0.95, 
+                step_size=0.1/L_train.shape[0], init_acc=2.0, reg_param=0.0)
+
+            train_marginals = gen_model.marginals(L_train)
+        
+        save_marginals(self.session, L_train, train_marginals)
+
+        if self.verbose:
+            # Display marginals
+            plt.hist(train_marginals, bins=20)
+            plt.show()
+            
+        # Display LF accuracies
+        if self.labeler and not majority_vote:
+            if train_acc:
+                L = self.labeler.load_matrix(self.session, split=TRAIN)
+                L_gold = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
+            else:
+                L = self.labeler.load_matrix(self.session, split=DEV)
+                L_gold = load_gold_labels(self.session, annotator_name='gold', split=DEV)
+            self.LF_stats = L.lf_stats(self.session, L_gold, gen_model.weights.lf_accuracy())
+        else:
+            self.LF_stats = None
+
+    def discriminative(self, model='logreg', search_n=20, 
+                       lr=0.01, l1_penalty=0.0, l2_penalty=0.0, 
+                       n_epochs=50, rebalance=True):
+
+        train_marginals = load_marginals(self.session, split=TRAIN)
+
+        # L_gold_train = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
+        L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
+
+        if model=='logreg':
+            disc_model = SparseLogisticRegression()
+
+            if not self.featurizer:
+                self.featurizer = FeatureAnnotator()
+            F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
+            F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
+
+            if search_n > 1:
+                rate_param = RangeParameter('lr', 1e-5, 1e-1, step=1, log_base=10)
+                l1_param  = RangeParameter('l1_penalty', 1e-5, 1e-1, step=1, log_base=10)
+                l2_param  = RangeParameter('l2_penalty', 1e-5, 1e-1, step=1, log_base=10)
+            
+                searcher = RandomSearch(self.session, disc_model, F_train, train_marginals, 
+                                        [rate_param, l1_param, l2_param], n=search_n)
+
+                print("\nRandom Search:")
+                search_stats = searcher.fit(F_dev, L_gold_dev, n_epochs=n_epochs, rebalance=rebalance, print_freq=25)
+
+                if self.verbose:
+                    print(search_stats)
+                    
+            else:
+                disc_model.train(F_train, train_marginals, 
+                                 lr=lr, l1_penalty=l1_penalty, l2_penalty=l2_penalty,
+                                 n_epochs=n_epochs, rebalance=rebalance)
+
+            print("\nEvaluation:")
+            TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev)
+        
+        else:
+            raise NotImplementedError
+
+    def display_dependencies(self, deps_encoded):
+        dep_names = {
+            0: 'DEP_SIMILAR',
+            1: 'DEP_FIXING',
+            2: 'DEP_REINFORCING',
+            3: 'DEP_EXCLUSIVE',
+        }
+        LF_names = {i:lf.__name__ for i, lf in enumerate(self.LFs)}
+        deps_decoded = []
+        for dep in deps_encoded:
+            (lf1, lf2, d) = dep
+            lfs = sorted([lf1, lf2])
+            deps_decoded.append((LF_names[lfs[0]], LF_names[lfs[1]], dep_names[d]))
+        for dep in sorted(list(set(deps_decoded))):
+            (lf1, lf2, d) = dep
+            print('{:16}: ({}, {})'.format(d, lf1, lf2))

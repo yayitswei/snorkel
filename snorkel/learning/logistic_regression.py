@@ -113,6 +113,10 @@ class LogisticRegression(TFNoiseAwareModel):
             for i in range(0, n, batch_size):
                 r = min(n-1, i+batch_size)
                 loss, _, nnz = self._run_batch(X_train, y_train, i, r, nnz)
+                # TEMP
+                if loss < 0:
+                    import pdb; pdb.set_trace()
+                # TEMP
                 epoch_loss += loss
             # Print training stats
             if verbose and (t % print_freq == 0 or t in [0, (n_epochs-1)]):

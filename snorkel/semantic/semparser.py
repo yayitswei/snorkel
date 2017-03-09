@@ -149,6 +149,8 @@ class SemanticParser():
                 if example.semantics and parse.semantics==example.semantics:
                     if show_correct: print("C: {}".format(semantics_))
                     nCorrect[i] += 1
+                    LF = parse.function
+                    LF.__name__ = LF.__name__[:(LF.__name__).rindex('_')] + '*'
                     correct_LFs.append(parse.function)
                     continue
                 # PASSING

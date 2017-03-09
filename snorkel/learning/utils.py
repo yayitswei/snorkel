@@ -340,7 +340,7 @@ class GridSearch(object):
             for pn, pv in zip(self.param_names, param_vals):
                 model_hyperparams[pn] = pv
             print "=" * 60
-            print "[%d] Testing %s" % (k+1, ', '.join([
+            print "[%d] Testing %s" % (k, ', '.join([
                 "%s = %0.2e" % (pn,pv)
                 for pn,pv in zip(self.param_names, param_vals)
             ]))

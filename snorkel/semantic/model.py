@@ -125,8 +125,12 @@ class CDRModel(SnorkelModel):
                 if self.verbose:
                     print("Candidates [Split {}]: {}".format(split, nCandidates))
 
-    def load_gold(self):
-        for split in range(self.splits):
+    def load_gold(self, splits=None):
+        if not splits:
+            splits = range(self.splits)
+        else:
+            splits = [splits] if not isinstance(splits, list) else splits
+        for split in splits:
             print("Split {}:".format(split))
             load_external_labels(self.session, self.candidate_class, split=split, annotator='gold')
 
@@ -265,6 +269,12 @@ class CDRModel(SnorkelModel):
             F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
             F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
 
+            if F_dev.get_candidate(self.session, 0) != L_gold_dev.get_candidate(self.session, 0):
+                print "FAIL!"
+                import pdb; pdb.set_trace()
+            else:
+                print "PASS!"
+
             if search_n > 1:
                 rate_param = RangeParameter('lr', 1e-6, 1e-1, step=1, log_base=10)
                 l1_param  = RangeParameter('l1_penalty', 1e-6, 1e-1, step=1, log_base=10)
@@ -288,9 +298,7 @@ class CDRModel(SnorkelModel):
                                  lr=lr, l1_penalty=l1_penalty, l2_penalty=l2_penalty,
                                  n_epochs=n_epochs, rebalance=rebalance)
                 TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev)
-                
 
-        
         else:
             raise NotImplementedError
 

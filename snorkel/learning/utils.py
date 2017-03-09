@@ -332,10 +332,8 @@ class GridSearch(object):
         run_stats       = []
         f1_opt          = -1.0
         base_model_name = self.model.name
-        model_k         = 0
         for k, param_vals in enumerate(self.search_space()):
-            model_name = '{0}_{1}'.format(base_model_name, model_k)
-            model_k += 1
+            model_name = '{0}_{1}'.format(base_model_name, k)
             # Set the new hyperparam configuration to test
             for pn, pv in zip(self.param_names, param_vals):
                 model_hyperparams[pn] = pv

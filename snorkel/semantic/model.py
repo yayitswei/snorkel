@@ -39,6 +39,7 @@ class SnorkelModel(object):
         self.seed = seed
         self.verbose = verbose
         self.featurizer = None
+        self.LFs = None
         self.labeler = None
 
     def parse(self, doc_preprocessor, fn=None, clear=True):
@@ -173,24 +174,24 @@ class CDRModel(SnorkelModel):
                         only=[])
             (correct, passing, failing, redundant, erroring, unknown) = sp.LFs
             LFs = []
-            if 'correct' in include:
-                LFs += correct
-            if 'passing' in include:
-                LFs += passing
-            if 'failing' in include:
-                LFs += failing
-            if 'redundant' in include:
-                LFs += redundant
-            if 'erroring' in include:
-                LFs += erroring
-            if 'unknown' in include:
-                LFs += unknown
+            for (name, lf_group) in [('correct', correct),
+                                     ('passing', passing),
+                                     ('failing', failing),
+                                     ('erroring', erroring),
+                                     ('unkonwn', unknown)]:
+                if name in include:
+                    LFs += lf_group
+                else:
+                    if len(lf_group) > 0:
+                        print("Discarding {0} {1} LFs...".format(len(lf_group), name))
             LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
         else:
             raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
         self.LFs = LFs
 
     def label(self):
+        if self.LFs is None:
+            raise ValueError("Must run generate_LFs() before calling generative model.")        
         labeler = LabelAnnotator(f=self.LFs)
         for split in range(self.splits):
             L = SnorkelModel.label(self, labeler, split)
@@ -200,10 +201,14 @@ class CDRModel(SnorkelModel):
                 training_set_summary_stats(L, return_vals=False, verbose=True)
         self.labeler = labeler
 
-    def generative(self, lfs='py', train_acc=False, model_dep=False, majority_vote=False, threshold=(1.0/3.0)):
+    def generative(self, lfs='py', model_dep=False, majority_vote=False, 
+                   empirical_from_train=False, threshold=(1.0/3.0),
+                   display_correlation=False):
         if not self.labeler:
-            self.labeler = LabelAnnotator(f=self.LFs)
+            self.labeler = LabelAnnotator(f=None)
         L_train = self.labeler.load_matrix(self.session, split=TRAIN)
+        # TEMP:
+        # L_train = self.labeler.load_matrix(self.session, split=DEV) # NOTE: this is temporary hack
         
         if majority_vote:
             train_marginals = np.where(np.ravel(np.sum(L_train, axis=1)) <= 0, 0.0, 1.0)
@@ -230,25 +235,26 @@ class CDRModel(SnorkelModel):
             plt.hist(train_marginals, bins=20)
             plt.show()
             
-        # Display LF accuracies
-        if self.labeler and not majority_vote:
-            if train_acc:
-                L = self.labeler.load_matrix(self.session, split=TRAIN)
-                L_gold = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
-            else:
-                L = self.labeler.load_matrix(self.session, split=DEV)
-                L_gold = load_gold_labels(self.session, annotator_name='gold', split=DEV)
-            self.LF_stats = L.lf_stats(self.session, L_gold, gen_model.weights.lf_accuracy())
-        else:
+        if majority_vote:
             self.LF_stats = None
+        else:
+            if self.verbose:
+                if empirical_from_train:
+                    L = self.labeler.load_matrix(self.session, split=TRAIN)
+                    L_gold = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
+                else:
+                    L = self.labeler.load_matrix(self.session, split=DEV)
+                    L_gold = load_gold_labels(self.session, annotator_name='gold', split=DEV)
+                self.LF_stats = L.lf_stats(self.session, L_gold, gen_model.weights.lf_accuracy())
+                if display_correlation:
+                    self.display_accuracy_correlation()
 
     def discriminative(self, model='logreg', search_n=20, 
                        lr=0.01, l1_penalty=0.0, l2_penalty=0.0, 
-                       n_epochs=50, rebalance=True):
+                       n_epochs=50, rebalance=True, print_freq=25):
 
         train_marginals = load_marginals(self.session, split=TRAIN)
 
-        # L_gold_train = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
         L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
 
         if model=='logreg':
@@ -260,29 +266,45 @@ class CDRModel(SnorkelModel):
             F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
 
             if search_n > 1:
-                rate_param = RangeParameter('lr', 1e-5, 1e-1, step=1, log_base=10)
-                l1_param  = RangeParameter('l1_penalty', 1e-5, 1e-1, step=1, log_base=10)
-                l2_param  = RangeParameter('l2_penalty', 1e-5, 1e-1, step=1, log_base=10)
+                rate_param = RangeParameter('lr', 1e-6, 1e-1, step=1, log_base=10)
+                l1_param  = RangeParameter('l1_penalty', 1e-6, 1e-1, step=1, log_base=10)
+                l2_param  = RangeParameter('l2_penalty', 1e-6, 1e-1, step=1, log_base=10)
             
                 searcher = RandomSearch(self.session, disc_model, F_train, train_marginals, 
                                         [rate_param, l1_param, l2_param], n=search_n)
 
                 print("\nRandom Search:")
-                search_stats = searcher.fit(F_dev, L_gold_dev, n_epochs=n_epochs, rebalance=rebalance, print_freq=25)
+                search_stats = searcher.fit(F_dev, L_gold_dev, n_epochs=n_epochs, 
+                                            rebalance=rebalance, print_freq=print_freq)
 
                 if self.verbose:
                     print(search_stats)
+                
+                print("\nEvaluation:")
+                TP, FP, TN, FN = searcher.model.score(self.session, F_dev, L_gold_dev)
                     
             else:
                 disc_model.train(F_train, train_marginals, 
                                  lr=lr, l1_penalty=l1_penalty, l2_penalty=l2_penalty,
                                  n_epochs=n_epochs, rebalance=rebalance)
+                TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev)
+                
 
-            print("\nEvaluation:")
-            TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev)
         
         else:
             raise NotImplementedError
+
+    def display_accuracy_correlation(self):
+        empirical = self.LF_stats['Empirical Acc.'].get_values()
+        learned = self.LF_stats['Learned Acc.'].get_values()
+        conflict = self.LF_stats['Conflicts'].get_values()
+        N = len(learned)
+        colors = np.random.rand(N)
+        area = np.pi * (30 * conflict)**2  # 0 to 30 point radii
+        plt.scatter(empirical, learned, s=area, c=colors, alpha=0.5)
+        plt.xlabel('empirical')
+        plt.ylabel('learned')
+        plt.show()
 
     def display_dependencies(self, deps_encoded):
         dep_names = {
@@ -295,8 +317,13 @@ class CDRModel(SnorkelModel):
         deps_decoded = []
         for dep in deps_encoded:
             (lf1, lf2, d) = dep
-            lfs = sorted([lf1, lf2])
-            deps_decoded.append((LF_names[lfs[0]], LF_names[lfs[1]], dep_names[d]))
-        for dep in sorted(list(set(deps_decoded))):
+            deps_decoded.append((LF_names[lf1], LF_names[lf2], dep_names[d]))
+        for dep in sorted(deps_decoded):
             (lf1, lf2, d) = dep
             print('{:16}: ({}, {})'.format(d, lf1, lf2))
+
+            # lfs = sorted([lf1, lf2])
+            # deps_decoded.append((LF_names[lfs[0]], LF_names[lfs[1]], dep_names[d]))
+        # for dep in sorted(list(set(deps_decoded))):
+        #     (lf1, lf2, d) = dep
+        #     print('{:16}: ({}, {})'.format(d, lf1, lf2))

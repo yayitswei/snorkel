@@ -89,6 +89,9 @@ class MentionScorer(Scorer):
         tn = set()
         fn = set()
 
+        # TEMP
+        matches = []
+        # TEMP
         for i, candidate in enumerate(self.test_candidates):
             test_label_index = self.test_labels.get_row_index(candidate)
             test_label       = self.test_labels[test_label_index, 0]
@@ -110,6 +113,15 @@ class MentionScorer(Scorer):
                         tn.add(candidate)
                     else:
                         fn.add(candidate)
+
+        # TEMP
+            matches.append((hash(candidate), test_label))
+        print("MAGIC #: {}".format(hash(tuple(sorted(matches)))))
+        # from pprint import pprint
+        # pprint(sorted(matches)[:20])
+        # import pdb; pdb.set_trace()
+        # TEMP
+
         if display:
 
             # Calculate scores unadjusted for TPs not in our candidate set

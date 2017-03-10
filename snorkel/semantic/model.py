@@ -38,9 +38,9 @@ class SnorkelModel(object):
         self.parallelism = parallelism
         self.seed = seed
         self.verbose = verbose
-        self.featurizer = None
         self.LFs = None
         self.labeler = None
+        self.featurizer = None
 
     def parse(self, doc_preprocessor, fn=None, clear=True):
         corpus_parser = CorpusParser(fn=fn)
@@ -125,11 +125,11 @@ class CDRModel(SnorkelModel):
                 if self.verbose:
                     print("Candidates [Split {}]: {}".format(split, nCandidates))
 
-    def load_gold(self, splits=None):
-        if not splits:
-            splits = range(self.splits)
+    def load_gold(self, split=None):
+        if not split:
+            splits = range(self.split)
         else:
-            splits = [splits] if not isinstance(splits, list) else splits
+            splits = [split] if not isinstance(split, list) else split
         for split in splits:
             print("Split {}:".format(split))
             load_external_labels(self.session, self.candidate_class, split=split, annotator='gold')
@@ -260,6 +260,11 @@ class CDRModel(SnorkelModel):
         train_marginals = load_marginals(self.session, split=TRAIN)
 
         L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
+        # dev = self.session.query(self.candidate_class).filter(self.candidate_class.split == 1).all()
+        # if dev[0] != L_gold_dev.get_candidate(self.session, 0):
+        #     print("FAILING!")
+        # else:
+        #     print("PASSING!")
 
         if model=='logreg':
             disc_model = SparseLogisticRegression()
@@ -268,12 +273,6 @@ class CDRModel(SnorkelModel):
                 self.featurizer = FeatureAnnotator()
             F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
             F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
-
-            if F_dev.get_candidate(self.session, 0) != L_gold_dev.get_candidate(self.session, 0):
-                print "FAIL!"
-                import pdb; pdb.set_trace()
-            else:
-                print "PASS!"
 
             if search_n > 1:
                 rate_param = RangeParameter('lr', 1e-6, 1e-1, step=1, log_base=10)

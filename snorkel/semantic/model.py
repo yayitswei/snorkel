@@ -127,7 +127,7 @@ class CDRModel(SnorkelModel):
 
     def load_gold(self, split=None):
         if not split:
-            splits = range(self.split)
+            splits = range(self.splits)
         else:
             splits = [split] if not isinstance(split, list) else split
         for split in splits:

@@ -90,7 +90,7 @@ class MentionScorer(Scorer):
         fn = set()
 
         # TEMP
-        matches = []
+        # matches = []
         # TEMP
         for i, candidate in enumerate(self.test_candidates):
             test_label_index = self.test_labels.get_row_index(candidate)
@@ -99,7 +99,7 @@ class MentionScorer(Scorer):
             # Set unlabeled examples to -1 by default
             if test_label == 0 and set_unlabeled_as_neg:
                 test_label = -1
-          
+
             # Bucket the candidates for error analysis
             test_label_array.append(test_label)
             if test_label != 0:
@@ -115,11 +115,8 @@ class MentionScorer(Scorer):
                         fn.add(candidate)
 
         # TEMP
-            matches.append((hash(candidate), test_label))
-        print("MAGIC #: {}".format(hash(tuple(sorted(matches)))))
-        # from pprint import pprint
-        # pprint(sorted(matches)[:20])
-        # import pdb; pdb.set_trace()
+        #     matches.append((hash(candidate), test_label))
+        # print("MAGIC #: {}, sum(labels): {}".format(hash(tuple(sorted(matches))), total))
         # TEMP
 
         if display:

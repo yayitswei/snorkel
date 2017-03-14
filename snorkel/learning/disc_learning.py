@@ -1,7 +1,8 @@
 import tensorflow as tf
 
 from .utils import marginals_to_labels, MentionScorer
-
+# TEMP
+import matplotlib.pyplot as plt
 
 class NoiseAwareModel(object):
     """Simple abstract base class for a model."""
@@ -36,6 +37,11 @@ class NoiseAwareModel(object):
         # Initialize scorer
         s = scorer(test_candidates, test_labels, gold_candidate_set)
         test_marginals  = self.marginals(X_test, **kwargs)
+        # TEMP
+        print("TEST MARGINALS:")
+        plt.hist(test_marginals, bins=20)
+        plt.show()
+        # TEMP
         return s.score(test_marginals, None, b=b, display=display,
                        set_unlabeled_as_neg=set_unlabeled_as_neg)
 

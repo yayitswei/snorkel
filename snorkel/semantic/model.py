@@ -268,11 +268,17 @@ class CDRModel(SnorkelModel):
 
         if model=='logreg':
             disc_model = SparseLogisticRegression()
+            # TEMP
+            self.model = disc_model
+            # TEMP
 
             if not self.featurizer:
                 self.featurizer = FeatureAnnotator()
             F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
             F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
+            # TEMP
+            # print(hash(F_dev))
+            # TEMP
 
             if search_n > 1:
                 rate_param = RangeParameter('lr', 1e-6, 1e-1, step=1, log_base=10)

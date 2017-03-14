@@ -7,6 +7,8 @@ from scipy.sparse import issparse
 from time import time
 from utils import LabelBalancer
 
+# TEMP
+import matplotlib.pyplot as plt
 
 class LogisticRegression(TFNoiseAwareModel):
 
@@ -113,10 +115,7 @@ class LogisticRegression(TFNoiseAwareModel):
             for i in range(0, n, batch_size):
                 r = min(n-1, i+batch_size)
                 loss, _, nnz = self._run_batch(X_train, y_train, i, r, nnz)
-                # TEMP
-                if loss < 0:
-                    import pdb; pdb.set_trace()
-                # TEMP
+                # assert(loss > 0)
                 epoch_loss += loss
             # Print training stats
             if verbose and (t % print_freq == 0 or t in [0, (n_epochs-1)]):
@@ -124,6 +123,13 @@ class LogisticRegression(TFNoiseAwareModel):
                 print(msg.format(self.name, t, time()-st, epoch_loss/n, nnz))
         if verbose:
             print("[{0}] Training done ({1:.2f}s)".format(self.name, time()-st))
+        # TEMP
+        # save_dict = self.session.run([self.save_dict])[0]
+        # b = save_dict['b']
+        # w = save_dict['w']
+        # plt.hist(w, bins=20)
+        # plt.show()
+        # TEMP
 
     def marginals(self, X_test):
         X_test = self._check_input(X_test)
@@ -218,6 +224,9 @@ class SparseLogisticRegression(LogisticRegression):
         # Get batch sparse tensor data
         indices, shape, ids, weights = self._batch_sparse_data(X_train[i:r, :])
         y_batch = y_train[i:r].reshape((r-i, 1))
+        # TEMP
+        # self.weights_mem = weights
+        # TEMP
         # Run training step and evaluate loss function
         if len(indices) == 0:
             return 0.0, None, last_nnz   
@@ -231,9 +240,16 @@ class SparseLogisticRegression(LogisticRegression):
 
     def marginals(self, X_test):
         X_test = self._check_input(X_test)
+        # TEMP
+        # print(hash(X_test))
+        # TEMP
         if X_test.shape[0] == 0:
             return np.ravel([])
         indices, shape, ids, weights = self._batch_sparse_data(X_test)
+        # TEMP
+        # plt.hist(weights, bins=20)
+        # plt.show()
+        # TEMP        
         return np.ravel(self.session.run([self.prediction], {
             self.indices: indices,
             self.shape:   shape,

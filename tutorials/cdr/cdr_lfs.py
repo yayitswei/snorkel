@@ -12,7 +12,7 @@ from snorkel.lf_helpers import (
     rule_regex_search_before_B,
 )
 
-with bz2.BZ2File(os.environ['SNORKELHOME'] + 'tutorials/cdr/data/ctd.pkl.bz2', 'rb') as ctd_f:
+with bz2.BZ2File(os.environ['SNORKELHOME'] + '/tutorials/cdr/data/ctd.pkl.bz2', 'rb') as ctd_f:
     ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
 
 def cand_in_ctd_unspecified(c):

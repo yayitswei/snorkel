@@ -147,7 +147,7 @@ class CDRModel(SnorkelModel):
         if source == 'py':
             LFs = get_cdr_lfs()
         elif source == 'nl':
-            with bz2.BZ2File('data/ctd.pkl.bz2', 'rb') as ctd_f:
+            with bz2.BZ2File(os.environ['SNORKELHOME'] + '/tutorials/cdr/data/ctd.pkl.bz2', 'rb') as ctd_f:
                 ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
             user_lists = {
                 'uncertain': ['combin', 'possible', 'unlikely'],

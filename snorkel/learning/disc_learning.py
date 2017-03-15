@@ -29,7 +29,7 @@ class NoiseAwareModel(object):
 
     def score(self, session, X_test, test_labels, gold_candidate_set=None, 
         b=0.5, set_unlabeled_as_neg=True, display=True, scorer=MentionScorer,
-        **kwargs):
+        train_marginals=None, **kwargs):
         # Get the test candidates
         test_candidates = [
             X_test.get_candidate(session, i) for i in xrange(X_test.shape[0])
@@ -42,7 +42,7 @@ class NoiseAwareModel(object):
         plt.hist(test_marginals, bins=20)
         plt.show()
         # TEMP
-        return s.score(test_marginals, None, b=b, display=display,
+        return s.score(test_marginals, train_marginals, b=b, display=display,
                        set_unlabeled_as_neg=set_unlabeled_as_neg)
 
     def save(self):

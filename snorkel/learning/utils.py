@@ -192,22 +192,24 @@ def calibration_plots(train_marginals, test_marginals, gold_labels=None):
     """Show classification accuracy and probability histogram plots"""
     n_plots = 3 if gold_labels is not None else 1
     
+    plt.figure(figsize=(12, 4))
+
     # Whole set histogram
     plt.subplot(1,n_plots,1)
     plot_prediction_probability(train_marginals)
-    plt.title("(a) # Predictions (training set)")
+    plt.title("(a) # Predictions\n(training set)")
 
     if gold_labels is not None:
 
         # Hold-out histogram
         plt.subplot(1,n_plots,2)
         plot_prediction_probability(test_marginals)
-        plt.title("(b) # Predictions (test set)")
+        plt.title("(b) # Predictions\n(test set)")
 
         # Classification bucket accuracy
         plt.subplot(1,n_plots,3)
         plot_accuracy(test_marginals, gold_labels)
-        plt.title("(c) Accuracy (test set)")
+        plt.title("(c) Accuracy\n(test set)")
     plt.show()
 
 
@@ -363,6 +365,7 @@ class GridSearch(object):
                 **validation_kwargs
             )
             p, r, f1 = scores_from_counts(tp, fp, tn, fn)
+            print("P: {:0.3f}, R: {:0.3f}, F1: {:0.3f}".format(p, r, f1))
             run_stats.append(list(param_vals) + [p, r, f1])
             if f1 > f1_opt:
                 self.model.save(model_name)

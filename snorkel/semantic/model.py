@@ -1,7 +1,6 @@
 # Semparser
 from semparse_examples import get_examples
 from load_external_annotations import load_external_labels
-from cdr_lfs import get_cdr_lfs, LF_closer_chem, LF_closer_dis
 from utils import TaggerOneTagger
 
 # Snorkel
@@ -31,9 +30,11 @@ DEV = 1
 TEST = 2
 
 class SnorkelModel(object):
-    def __init__(self, session, candidate_class, splits=3, parallelism=1, seed=0, verbose=True):
+    def __init__(self, session, candidate_class, traditional=False, 
+                 splits=3, parallelism=1, seed=0, verbose=True):
         self.session = session
         self.candidate_class = candidate_class
+        self.traditional = traditional
         self.splits = splits
         self.parallelism = parallelism
         self.seed = seed
@@ -74,16 +75,6 @@ class SnorkelModel(object):
         raise NotImplementedError
 
 class CDRModel(SnorkelModel):
-    def __init__(self, session, candidate_class, splits=3, parallelism=1, seed=0, verbose=True):
-        SnorkelModel.__init__(
-            self, 
-            session, 
-            candidate_class=candidate_class, 
-            splits=splits,
-            parallelism=parallelism, 
-            seed=seed, 
-            verbose=verbose)
-
     def parse(self, file_path='data/CDR.BioC.xml', max_docs=float('inf'), clear=True):
         doc_preprocessor = XMLMultiDocPreprocessor(
             path=file_path,
@@ -145,6 +136,7 @@ class CDRModel(SnorkelModel):
 
     def generate_lfs(self, source='py', include=[], remove_paren=True):
         if source == 'py':
+            from cdr_lfs import get_cdr_lfs
             LFs = get_cdr_lfs()
         elif source == 'nl':
             with bz2.BZ2File(os.environ['SNORKELHOME'] + '/tutorials/cdr/data/ctd.pkl.bz2', 'rb') as ctd_f:
@@ -188,6 +180,7 @@ class CDRModel(SnorkelModel):
                 else:
                     if len(lf_group) > 0:
                         print("Discarding {0} {1} LFs...".format(len(lf_group), name))
+            from cdr_lfs import LF_closer_chem, LF_closer_dis
             LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
         else:
             raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
@@ -205,7 +198,9 @@ class CDRModel(SnorkelModel):
                 training_set_summary_stats(L, return_vals=False, verbose=True)
         self.labeler = labeler
 
-    def generative(self, lfs='py', model_dep=False, majority_vote=False, 
+    def supervise(self, lfs='py', 
+                   model_dep=False, 
+                   majority_vote=False, 
                    empirical_from_train=False, threshold=(1.0/3.0),
                    display_correlation=False):
         if not self.labeler:
@@ -213,53 +208,62 @@ class CDRModel(SnorkelModel):
         L_train = self.labeler.load_matrix(self.session, split=TRAIN)
         # TEMP:
         # L_train = self.labeler.load_matrix(self.session, split=DEV) # NOTE: this is temporary hack
-        
-        if majority_vote:
-            train_marginals = np.where(np.ravel(np.sum(L_train, axis=1)) <= 0, 0.0, 1.0)
-        else:
-            if model_dep:
-                ds = DependencySelector()
-                deps = ds.select(L_train, threshold=threshold)
-                if self.verbose:
-                    self.display_dependencies(deps)
-            else:
-                deps = ()
-        
-            gen_model = GenerativeModel(lf_propensity=True)
-            gen_model.train(
-                L_train, deps=deps, epochs=20, decay=0.95, 
-                step_size=0.1/L_train.shape[0], init_acc=2.0, reg_param=0.0)
 
-            train_marginals = gen_model.marginals(L_train)
-        
+        if self.traditional:
+            # Do traditional supervision with hard labels
+            L_gold_train = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
+            train_marginals = np.array(L_gold_train.todense()).reshape((L_gold_train.shape[0],))
+            train_marginals[train_marginals==-1] = 0
+        else:
+            if majority_vote:
+                train_marginals = np.where(np.ravel(np.sum(L_train, axis=1)) <= 0, 0.0, 1.0)
+            else:
+                if model_dep:
+                    ds = DependencySelector()
+                    deps = ds.select(L_train, threshold=threshold)
+                    if self.verbose:
+                        self.display_dependencies(deps)
+                else:
+                    deps = ()
+            
+                gen_model = GenerativeModel(lf_propensity=True)
+                gen_model.train(
+                    L_train, deps=deps, epochs=20, decay=0.95, 
+                    step_size=0.1/L_train.shape[0], init_acc=2.0, reg_param=0.0)
+
+                train_marginals = gen_model.marginals(L_train)
+                
+            if majority_vote:
+                self.LF_stats = None
+            else:
+                if self.verbose:
+                    if empirical_from_train:
+                        L = self.labeler.load_matrix(self.session, split=TRAIN)
+                        L_gold = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
+                    else:
+                        L = self.labeler.load_matrix(self.session, split=DEV)
+                        L_gold = load_gold_labels(self.session, annotator_name='gold', split=DEV)
+                    self.LF_stats = L.lf_stats(self.session, L_gold, gen_model.weights.lf_accuracy())
+                    if display_correlation:
+                        self.display_accuracy_correlation()
+            
         save_marginals(self.session, L_train, train_marginals)
 
         if self.verbose:
             # Display marginals
             plt.hist(train_marginals, bins=20)
             plt.show()
-            
-        if majority_vote:
-            self.LF_stats = None
-        else:
-            if self.verbose:
-                if empirical_from_train:
-                    L = self.labeler.load_matrix(self.session, split=TRAIN)
-                    L_gold = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
-                else:
-                    L = self.labeler.load_matrix(self.session, split=DEV)
-                    L_gold = load_gold_labels(self.session, annotator_name='gold', split=DEV)
-                self.LF_stats = L.lf_stats(self.session, L_gold, gen_model.weights.lf_accuracy())
-                if display_correlation:
-                    self.display_accuracy_correlation()
 
-    def discriminative(self, model='logreg', search_n=20, 
+    def classify(self, model='logreg', search_n=20, 
                        lr=0.01, l1_penalty=0.0, l2_penalty=0.0, 
                        n_epochs=50, rebalance=True, print_freq=25):
 
         train_marginals = load_marginals(self.session, split=TRAIN)
 
-        L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
+        if self.splits > DEV:
+            L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
+        if self.splits > TEST:
+            L_gold_test = load_gold_labels(self.session, annotator_name='gold', split=TEST)
         # dev = self.session.query(self.candidate_class).filter(self.candidate_class.split == 1).all()
         # if dev[0] != L_gold_dev.get_candidate(self.session, 0):
         #     print("FAILING!")
@@ -274,11 +278,22 @@ class CDRModel(SnorkelModel):
 
             if not self.featurizer:
                 self.featurizer = FeatureAnnotator()
-            F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
-            F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
+            if self.splits > TRAIN:
+                F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
+            if self.splits > DEV:
+                F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
+            if self.splits > TEST:
+                F_test =  self.featurizer.load_matrix(self.session, split=TEST)
             # TEMP
+            # import pdb; pdb.set_trace()
             # print(hash(F_dev))
             # TEMP
+
+            if self.traditional:
+                train_size = self.traditional
+                F_train = F_train[:train_size, :]
+                train_marginals = train_marginals[:train_size]
+                print("Using {0} hard-labeled examples for supervision\n".format(train_marginals.shape[0]))
 
             if search_n > 1:
                 rate_param = RangeParameter('lr', 1e-6, 1e-1, step=1, log_base=10)
@@ -295,14 +310,20 @@ class CDRModel(SnorkelModel):
                 if self.verbose:
                     print(search_stats)
                 
-                print("\nEvaluation:")
-                TP, FP, TN, FN = searcher.model.score(self.session, F_dev, L_gold_dev)
+                disc_model = searcher.model
                     
             else:
                 disc_model.train(F_train, train_marginals, 
                                  lr=lr, l1_penalty=l1_penalty, l2_penalty=l2_penalty,
                                  n_epochs=n_epochs, rebalance=rebalance)
-                TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev)
+            
+            if self.splits > DEV:
+                print("\nDev:")
+                TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev, train_marginals=train_marginals)
+            
+            if self.splits > TEST:
+                print("\nTest:")
+                TP, FP, TN, FN = disc_model.score(self.session, F_test, L_gold_test, train_marginals=train_marginals)
 
         else:
             raise NotImplementedError

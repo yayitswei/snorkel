@@ -96,9 +96,17 @@ class LogisticRegression(TFNoiseAwareModel):
         self.seed       = seed
         self._build()
         # Get training indices
-        train_idxs = LabelBalancer(training_marginals).get_train_idxs(rebalance)
+        # train_idxs = LabelBalancer(training_marginals).get_train_idxs(rebalance)
+        # TEMP
+        train_idxs = LabelBalancer(training_marginals).get_train_idxs(False)
+        # TEMP
         X_train = X[train_idxs, :]
         y_train = np.ravel(training_marginals)[train_idxs]
+        # TEMP
+        # plt.hist(y_train, bins=20)
+        # plt.show()
+        # import pdb; pdb.set_trace()
+        # TEMP
         # Run mini-batch SGD
         n = X_train.shape[0]
         batch_size = min(batch_size, n)
@@ -204,6 +212,9 @@ class SparseLogisticRegression(LogisticRegression):
         X_lil = X.tolil()
         indices, ids, weights = [], [], []
         max_len = 0
+        # TEMP
+        # import pdb; pdb.set_trace()
+        # TEMP
         for i, (row, data) in enumerate(zip(X_lil.rows, X_lil.data)):
             # Dummy weight for all-zero row
             if len(row) == 0:
@@ -225,6 +236,7 @@ class SparseLogisticRegression(LogisticRegression):
         indices, shape, ids, weights = self._batch_sparse_data(X_train[i:r, :])
         y_batch = y_train[i:r].reshape((r-i, 1))
         # TEMP
+        # X_train.get_candidate()
         # self.weights_mem = weights
         # TEMP
         # Run training step and evaluate loss function
@@ -249,7 +261,7 @@ class SparseLogisticRegression(LogisticRegression):
         # TEMP
         # plt.hist(weights, bins=20)
         # plt.show()
-        # TEMP        
+        # TEMP      
         return np.ravel(self.session.run([self.prediction], {
             self.indices: indices,
             self.shape:   shape,

@@ -71,7 +71,6 @@ class SemanticParser():
                 show_erroring=False,
                 show_unknown=False,
                 pseudo_python=False,
-                absorb=False,
                 remove_paren=False,
                 only=[]):
         """Returns a pandas DataFrame with the explanations and various per-explanation stats"""
@@ -115,14 +114,17 @@ class SemanticParser():
                 print("SENTENCE: {}\n".format(example.candidate[0].get_parent()._asdict()['text']))
             semantics = set()
             explanation = example.explanation
+            # TODO: remove remove_paren keyword and code
             if remove_paren:
                 explanation = explanation.replace('(', '')
                 explanation = explanation.replace(')', '')
             parses = self.parse(
                         explanation, 
                         example.name,
-                        verbose=False, 
                         return_parses=True)
+            # TEMP
+            # for parse in self.spurify(parses, spurious_sources=spurious_sources):
+            # TEMP
             for parse in parses:
                 if show_parse:
                     print("PARSE: {}\n".format(parse))
@@ -193,28 +195,42 @@ class SemanticParser():
         
         return DataFrame(data=d, index=example_names)[col_names]
 
-        # Default LF stats
-        # d = {
-        #     'j'         : range(self.shape[1]),
-        #     'Coverage'  : Series(data=matrix_coverage(self), index=lf_names),
-        #     'Overlaps'  : Series(data=matrix_overlaps(self), index=lf_names),
-        #     'Conflicts' : Series(data=matrix_conflicts(self), index=lf_names)
-        # }
-        # if labels is not None:
-        #     col_names.extend(['TP', 'FP', 'FN', 'TN', 'Empirical Acc.'])
-        #     ls = np.ravel(labels.todense() if sparse.issparse(labels) else labels)
-        #     tp = matrix_tp(self, ls)
-        #     fp = matrix_fp(self, ls)
-        #     fn = matrix_fn(self, ls)
-        #     tn = matrix_tn(self, ls)
-        #     ac = (tp+tn).astype(float) / (tp+tn+fp+fn)
-        #     d['Empirical Acc.'] = Series(data=ac, index=lf_names)
-        #     d['TP']             = Series(data=tp, index=lf_names)
-        #     d['FP']             = Series(data=fp, index=lf_names)
-        #     d['FN']             = Series(data=fn, index=lf_names)
-        #     d['TN']             = Series(data=tn, index=lf_names)
+    # def spurify(self, parses, spurious_sources={}):
+    #     """
+    #     spurious_sources[key] = x
+    #     key: one of ['compare_op_swap', 'binary_op_swap', 'logic_op_swap', 
+    #                 'grouping', 'split_compound', 'off_by_one']
+    #     x: percentage of parses to be mutated by that spurious source
+    #     """        
+    #     compare_ops = ['.eq','.neq','.lt','.leq','.geq','.gt']
+    #     for parse in parses:
+    #         import pdb; pdb.set_trace()
+    #         yield parse
+    #         # determine which sources to use
+    #         for (source, prob) in spurious_sources.items():
+    #             if np.random.random() < prob:
+    #                 if source == 'compare_op_swap':
 
-        # if est_accs is not None:
-        #     col_names.append('Learned Acc.')
-        #     d['Learned Acc.'] = Series(data=est_accs, index=lf_names)
-        # return DataFrame(data=d, index=example_names)[col_names]
+    #                     op = parse.semantics[0]
+    #                     args = parse.semantics[1:]
+    #                     if op in compare_ops:
+    #                         print(parse.semantics)
+    #                         parse
+
+    #                     if parse.rule
+
+    #                 if self.rule.is_lexical():
+    #                     return self.rule.sem
+    #                 else:
+    #                     child_semantics = [child.semantics for child in self.children]
+    #                     return self.rule.apply_semantics(child_semantics)
+    #                 lf = self.grammar.evaluate(parse)
+    #                 parse.function = lf
+    #                 yield parse
+    #         import pdb; pdb.set_trace()
+        
+    #     def __init__(self, rule, children):
+    #     self.rule = rule
+    #     self.children = tuple(children[:])
+    #     self.semantics = self.compute_semantics()
+    #     self.validate_parse()

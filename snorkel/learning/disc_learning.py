@@ -38,7 +38,7 @@ class NoiseAwareModel(object):
         s = scorer(test_candidates, test_labels, gold_candidate_set)
         test_marginals  = self.marginals(X_test, **kwargs)
         # TEMP
-        print("TEST MARGINALS:")
+        print("EVAL MARGINALS:")
         plt.hist(test_marginals, bins=20)
         plt.show()
         # TEMP

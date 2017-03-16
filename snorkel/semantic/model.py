@@ -21,6 +21,7 @@ from pprint import pprint
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import random
 import csv
 import cPickle
 import bz2
@@ -134,7 +135,7 @@ class CDRModel(SnorkelModel):
                 print("\nFeaturized split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nFeatures, F.nnz))
         self.featurizer = featurizer
 
-    def generate_lfs(self, source='py', include=[], remove_paren=True):
+    def generate_lfs(self, source='py', include=[], max_lfs=None, remove_paren=True):
         if source == 'py':
             from cdr_lfs import get_cdr_lfs
             LFs = get_cdr_lfs()
@@ -184,6 +185,9 @@ class CDRModel(SnorkelModel):
             LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
         else:
             raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
+        if max_lfs:
+            random.shuffle(LFs)
+            LFs = LFs[:max_lfs]
         self.LFs = LFs
 
     def label(self):
@@ -201,7 +205,8 @@ class CDRModel(SnorkelModel):
     def supervise(self, lfs='py', 
                    model_dep=False, 
                    majority_vote=False, 
-                   empirical_from_train=False, threshold=(1.0/3.0),
+                   empirical_from_train=False, 
+                   threshold=(1.0/3.0),
                    display_correlation=False):
         if not self.labeler:
             self.labeler = LabelAnnotator(f=None)

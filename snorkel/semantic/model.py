@@ -31,15 +31,15 @@ DEV = 1
 TEST = 2
 
 class SnorkelModel(object):
-    def __init__(self, session, candidate_class, traditional=False, 
-                 splits=3, parallelism=1, seed=0, verbose=True):
+    def __init__(self, session, candidate_class, **kwargs):
         self.session = session
         self.candidate_class = candidate_class
-        self.traditional = traditional
-        self.splits = splits
-        self.parallelism = parallelism
-        self.seed = seed
-        self.verbose = verbose
+
+        self.splits = kwargs.get('splits', 3)
+        self.parallelism = kwargs.get('parallelism', 1)
+        self.seed = kwargs.get('seed', 0)
+        self.verbose = kwargs.get('verbose', True)
+
         self.LFs = None
         self.labeler = None
         self.featurizer = None
@@ -76,6 +76,11 @@ class SnorkelModel(object):
         raise NotImplementedError
 
 class CDRModel(SnorkelModel):
+    def __init__(self, session, candidate_class, **kwargs):
+        self.traditional = kwargs['traditional']
+        self.max_train = kwargs['max_train']
+        SnorkelModel.__init__(self, session, candidate_class, **kwargs)
+
     def parse(self, file_path='data/CDR.BioC.xml', max_docs=float('inf'), clear=True):
         doc_preprocessor = XMLMultiDocPreprocessor(
             path=file_path,

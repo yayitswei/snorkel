@@ -3,7 +3,7 @@ from __future__ import print_function
 from util import CoreNLPHandler
 from helpers import lf_helpers
 
-from collections import defaultdict, Iterable
+from collections import defaultdict, namedtuple, Iterable
 from itertools import product
 from six import StringIO
 from types import FunctionType
@@ -35,7 +35,11 @@ class Grammar(object):
         using this grammar.
         """
         input = input.lower()
-        tokens = [t for t in self.corenlp.parse(input)]
+        tokens = [t for t in self.corenlp.parse(input)] # Assumes a single sentence
+        # Add start and stop after parsing to not confuse the CoreNLP parser
+        start = {'word': '<START>', 'pos': '<START>', 'ner': '<START>'}
+        stop = {'word': '<STOP>', 'pos': '<STOP>', 'ner': '<STOP>'}
+        tokens = [start] + tokens + [stop]
         words = [t['word'] for t in tokens]
         self.words = words # TEMP (for print_chart)
         chart = defaultdict(list)

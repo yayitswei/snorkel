@@ -18,8 +18,8 @@ def sems_reversed(sems):
 
 # Rules ======================================================================
 lexical_rules = (
-    # [Rule('$Start', w) for w in ['<START>']] +
-    # [Rule('$Stop', w) for w in ['STOP']] +
+    [Rule('$Start', w) for w in ['<START>']] +
+    [Rule('$Stop', w) for w in ['<STOP>']] +
     [Rule('$Label', w, '.label') for w in ['label ?it']] +
     [Rule('$Arg', w, '.arg') for w in ['arg', 'argument']] +
     [Rule('$True', w, ('.bool', True)) for w in ['true', 'correct']] +
@@ -122,11 +122,10 @@ unary_rules = [
     Rule('$List', '$StringList', sems0), # Also: UserList ->  StringList -> List
     Rule('$List', '$IntList', sems0),
     Rule('$List', '$TokenList', sems0),
-    Rule('$ROOT', '$LF', lambda sems: ('.root', sems[0])),
 ]
 
 compositional_rules = [
-    # Rule('$ROOT', '$Start $LF $Stop', lambda sems: ('.root', sems[1])),
+    Rule('$ROOT', '$Start $LF $Stop', lambda sems: ('.root', sems[1])),
     Rule('$LF', '$Label $Bool $Because $Bool ?$Punctuation', lambda sems: (sems[0], sems[1], sems[3])),
 
     ### Logicals ###

@@ -26,30 +26,29 @@ class Grammar(object):
         self.corenlp = CoreNLPHandler()
         for rule in rules:
             self.add_rule(rule)
-        # for annotator in annotators:
-        #     for rule in annotator.rules:
-        #         self.add_rule(rule)
-        # if user_lists:
-        #     self.add_rule(Rule('$UserList', ('$UserList', '$QueryToken'), lambda sems: sems[0]))
         print('Created grammar with %d rules' % \
             (len(self.lexical_rules) + len(self.unary_rules) + len(self.binary_rules)))
 
-    def parse_input(self, input, stopwords=[]):
+    def parse_input(self, input):
         """
         Returns the list of parses for the given input which can be derived
         using this grammar.
         """
         input = input.lower()
-        tokens = [t for t in self.corenlp.parse(input) if t['word'] not in stopwords]
+        tokens = [t for t in self.corenlp.parse(input)]
         words = [t['word'] for t in tokens]
         self.words = words # TEMP (for print_chart)
         chart = defaultdict(list)
+        stopword_locs = []
+        for i in range(len(tokens)):
+            self.apply_annotators(chart, tokens, i, i + 1) # tokens[i:j] should be tagged?
+            stopword_locs.append(any(parse.rule.lhs == '$Stopword' for parse in chart[(i, i + 1)]))
         for j in range(1, len(tokens) + 1):
             for i in range(j - 1, -1, -1):
                 self.apply_user_lists(chart, words, i, j) # words[i:j] is the name of a UserList?
-                self.apply_annotators(chart, tokens, i, j) # tokens[i:j] should be tagged?
                 self.apply_lexical_rules(chart, words, i, j) # words[i:j] matches lexical rule?
                 self.apply_binary_rules(chart, i, j) # any split of words[i:j] matches binary rule?
+                self.apply_stopword_rules(chart, stopword_locs, i, j)
                 self.apply_unary_rules(chart, i, j) # add additional tags if chart[(i,j)] matches unary rule
         parses = chart[(0, len(tokens))]
         if self.start_symbol:
@@ -65,8 +64,6 @@ class Grammar(object):
             self.add_rule_containing_optional(rule)
         elif rule.is_lexical():
             self.lexical_rules[rule.rhs].append(rule)
-            # if self.absorb:
-            #     self.add_absorption_rule(rule)
         elif rule.is_unary():
             self.unary_rules[rule.rhs].append(rule)
         elif rule.is_binary():
@@ -111,13 +108,6 @@ class Grammar(object):
         if isinstance(rule.sem, FunctionType):
             sem = lambda sems: rule.sem(sems[:first] + [None] + sems[first:])
         self.add_rule(Rule(rule.lhs, prefix + suffix, sem))
-
-    # def add_absorption_rule(self, rule):
-    #     lhs = rule.lhs
-    #     rhs = (rule.lhs, '$QueryToken')
-    #     new_rule = Rule(lhs, rhs, rule.sem)
-    #     if new_rule not in self.binary_rules[new_rule.rhs]:
-    #         self.binary_rules[new_rule.rhs].append(new_rule)
 
     def add_n_ary_rule(self, rule):
         """
@@ -183,6 +173,16 @@ class Grammar(object):
             for parse_1, parse_2 in product(chart[(i, k)], chart[(k, j)]):
                 for rule in self.binary_rules[(parse_1.rule.lhs, parse_2.rule.lhs)]:
                     chart[(i, j)].append(Parse(rule, [parse_1, parse_2]))
+    
+    def apply_stopword_rules(self, chart, stopword_locs, i, j):
+        """Add parses to chart cell (i, j) by applying binary rules."""
+        if j - i > 2:
+            for m in range(i + 1, j - 1):
+                for n in range(m + 1, j):
+                    if all(stopword_locs[m:n]):
+                        for parse_1, parse_2 in product(chart[(i, m)], chart[(n, j)]):
+                            for rule in self.binary_rules[(parse_1.rule.lhs, parse_2.rule.lhs)]:
+                                chart[(i, j)].append(Parse(rule, [parse_1, parse_2]))
 
     def apply_unary_rules(self, chart, i, j):
         """Add parses to chart cell (i, j) by applying unary rules."""
@@ -325,7 +325,7 @@ def is_optional(label):
     
 # Parse ========================================================================
 
-class Parse:
+class Parse(object):
     def __init__(self, rule, children):
         self.rule = rule
         self.children = tuple(children[:])

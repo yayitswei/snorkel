@@ -6,7 +6,7 @@ from pandas import DataFrame, Series
 
 class SemanticParser():
     def __init__(self, candidate_class, user_lists={}):
-        annotators = [TokenAnnotator(), PunctuationAnnotator(), IntegerAnnotator()]
+        annotators = [TokenAnnotator(), StopwordAnnotator(), PunctuationAnnotator(), IntegerAnnotator()]
         self.grammar = Grammar(rules=snorkel_rules, 
                                ops=snorkel_ops, 
                                candidate_class=candidate_class,
@@ -14,16 +14,11 @@ class SemanticParser():
                                annotators=annotators)
         self.explanation_counter = 0
         self.LFs = tuple([None] * 6)
-        self.stopwords = (['is', 'are', 'be', 'comes', 'appears', 'occurs',
-                            'a', 'an', 'the', 
-                            'from']) # need 'of' and 'to' for LFs
 
     def preprocess(self, explanations):
         for explanation in explanations:
             explanation = explanation.replace("'", '"')
             yield explanation
-            # words = explanation.split()
-            # yield ' '.join([w for w in words if w not in stopwords])
 
     def parse(self, explanations, names=None, verbose=False, return_parses=False):
         """
@@ -34,7 +29,7 @@ class SemanticParser():
         explanations = explanations if isinstance(explanations, list) else [explanations]
         names = names if isinstance(names, list) else [names]
         for i, exp in enumerate(self.preprocess(explanations)):
-            exp_parses = self.grammar.parse_input(exp, stopwords=self.stopwords)
+            exp_parses = self.grammar.parse_input(exp)
             for j, parse in enumerate(exp_parses):
                 # print(parse.semantics)
                 lf = self.grammar.evaluate(parse)
@@ -79,6 +74,10 @@ class SemanticParser():
         if show_semantics:
             show_correct = show_passing = show_failing = True
             show_redundant = show_erroring = show_unknown = True
+        # show_anything = (show_explanation or show_candidate or show_sentence or 
+        #                  show_parse or show_semantics or show_correct or 
+        #                  show_passing or show_failing or show_redundant or
+        #                  show_erroring or show_unknown)
         self.explanation_counter = 0
         examples = examples if isinstance(examples, list) else [examples]
         col_names = ['Correct', 'Passing', 'Failing', 'Redundant', 'Erroring', 'Unknown','Index']
@@ -133,7 +132,7 @@ class SemanticParser():
                 if parse.semantics in semantics:
                     if show_redundant: print("R: {}".format(semantics_))
                     nRedundant[i] += 1
-                    redundant_LFs += parse.function
+                    redundant_LFs.append(parse.function)
                     continue
                 semantics.add(parse.semantics)
                 # ERRORING

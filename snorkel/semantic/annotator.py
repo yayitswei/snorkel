@@ -2,28 +2,18 @@ from grammar import Rule
 
 import re
 
+stopwords = ['is', 'are', 'be', 'comes', 'appears', 'occurs', 
+             'a', 'an', 'the', 
+             'of', 'from', 'to', 
+             'also', 'too']
+
 class Annotator:
     """A base class for annotators."""
-    def __init__(self):
-        self.rules = self.make_rules()
-
     def annotate(self, tokens):
         """Returns a list of pairs, each a category and a semantic representation."""
         return []
-    
-    def make_rules(self):
-        """Returns a list of lexical rules"""
-        return NotImplementedError
-        # rules = []
-        # for lhs in self.categories:
-        #     rules.append(Rule(lhs, (lhs, '$QueryToken'), lambda sems: sems[0]))
-        # return rules
 
 class TokenAnnotator(Annotator):
-    def __init__(self):
-        self.categories = []
-        Annotator.__init__(self)
-    
     def annotate(self, tokens):
         # Quotation marks are hard stops to prevent merging of multiple strings
         if len(tokens) == 1 and tokens[0]['pos'] not in ["``", "\'\'"]:
@@ -31,11 +21,15 @@ class TokenAnnotator(Annotator):
         else:
             return []
 
+class StopwordAnnotator(Annotator):
+    def annotate(self, tokens):
+        # Quotation marks are hard stops to prevent merging of multiple strings
+        if len(tokens) == 1 and tokens[0]['word'] in stopwords:
+            return [('$Stopword', tokens[0]['word'])]
+        else:
+            return []
+
 class PunctuationAnnotator(Annotator):
-    def __init__(self):
-        self.categories = ['$Quote', '$OpenParen', '$CloseParen']
-        Annotator.__init__(self)
-    
     def annotate(self, tokens):
         if len(tokens) == 1:
             if tokens[0]['pos'] in ["``", "\'\'"]:
@@ -47,10 +41,6 @@ class PunctuationAnnotator(Annotator):
         return []
 
 class IntegerAnnotator(Annotator):
-    def __init__(self):
-        self.categories = ['$Int']
-        Annotator.__init__(self)
-
     def annotate(self, tokens):
         if len(tokens) == 1:
             if all(token['ner'] in ['NUMBER','ORDINAL'] for token in tokens):

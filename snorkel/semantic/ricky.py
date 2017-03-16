@@ -18,6 +18,8 @@ def sems_reversed(sems):
 
 # Rules ======================================================================
 lexical_rules = (
+    # [Rule('$Start', w) for w in ['<START>']] +
+    # [Rule('$Stop', w) for w in ['STOP']] +
     [Rule('$Label', w, '.label') for w in ['label ?it']] +
     [Rule('$Arg', w, '.arg') for w in ['arg', 'argument']] +
     [Rule('$True', w, ('.bool', True)) for w in ['true', 'correct']] +
@@ -25,17 +27,17 @@ lexical_rules = (
     [Rule('$And', w, '.and') for w in ['and']] +
     [Rule('$Or', w, '.or') for w in ['or', 'nor']] +
     [Rule('$Not', w, '.not') for w in ['not', "n't"]] +
-    [Rule('$All', w, '.all') for w in ['all ?of']] +
-    [Rule('$Any', w, '.any') for w in ['any ?of', 'a']] +
-    [Rule('$None', w, '.none') for w in ['none ?of', 'not any', 'neither', 'no']] +
+    [Rule('$All', w, '.all') for w in ['all']] +
+    [Rule('$Any', w, '.any') for w in ['any', 'a']] +
+    [Rule('$None', w, '.none') for w in ['none', 'not any', 'neither', 'no']] +
     # [Rule('$Is', w) for w in ['is', 'are', 'be']] +
     [Rule('$Because', w) for w in ['because', 'since', 'if']] +
     [Rule('$Upper', w, '.upper') for w in ['upper', 'uppercase', 'upper case', 'all caps', 'all capitalized']] +
     [Rule('$Lower', w, '.lower') for w in ['lower', 'lowercase', 'lower case']] +
     [Rule('$Capital', w, '.capital') for w in ['capital', 'capitals', 'capitalized']] +
-    [Rule('$Equals', w, '.eq') for w in ['equal ?to', 'equals', '=', '==', 'same', 'identical', 'exactly']] + 
+    [Rule('$Equals', w, '.eq') for w in ['equal', 'equals', '=', '==', 'same', 'identical', 'exactly']] + 
     [Rule('$LessThan', w, '.lt') for w in ['less than', 'smaller than', '<']] +
-    [Rule('$AtMost', w, '.leq') for w in ['at most', 'no larger than', 'less than or equal ?to', 'within', 'no more than', '<=']] +
+    [Rule('$AtMost', w, '.leq') for w in ['at most', 'no larger than', 'less than or equal', 'within', 'no more than', '<=']] +
     [Rule('$AtLeast', w, '.geq') for w in ['at least', 'no less than', 'no smaller than', 'greater than or equal', '>=']] +
     [Rule('$MoreThan', w, '.gt') for w in ['more than', 'greater than', 'larger than', '>']] + 
     [Rule('$Within', w, '.within') for w in ['within']] +
@@ -48,12 +50,12 @@ lexical_rules = (
     [Rule('$Contains', w, '.contains') for w in ['contains', 'contain']] +
     [Rule('$StartsWith', w, '.startswith') for w in ['starts with', 'start with']] +
     [Rule('$EndsWith', w, '.endswith') for w in ['ends with', 'end with']] +
-    [Rule('$Left', w, '.left') for w in ['?to ?the left ?of', 'before', 'precedes', 'preceding', 'followed by']] +
-    [Rule('$Right', w, '.right') for w in ['?to ?the right ?of', 'after', 'follows', 'following']] +
-    [Rule('$Sentence', w, '.sentence') for w in ['?in ?the sentence']] +
+    [Rule('$Left', w, '.left') for w in ['left', 'before', 'precedes', 'preceding', 'followed by']] +
+    [Rule('$Right', w, '.right') for w in ['right', 'after', 'follows', 'following']] +
+    [Rule('$Sentence', w, '.sentence') for w in ['sentence', 'in the sentence']] +
     [Rule('$Between', w, '.between') for w in ['between', 'inbetween']] +
     [Rule('$Separator', w) for w in [',', ';', '/']] +
-    [Rule('$Count', w, '.count') for w in ['number ?of', 'length', 'count']] +
+    [Rule('$Count', w, '.count') for w in ['number', 'length', 'count']] +
     [Rule('$Word', w, 'words') for w in ['word', 'words', 'term', 'terms', 'phrase', 'phrases']] + 
     [Rule('$Char', w, 'chars') for w in ['character', 'characters', 'letter', 'letters']] + 
     [Rule('$NounPOS', w, ('.string', 'NN')) for w in ['noun', 'nouns']] +
@@ -63,11 +65,11 @@ lexical_rules = (
     [Rule('$LocationNER', w, ('.string', 'LOCATION')) for w in ['location', 'locations', 'place', 'places']] +
     [Rule('$OrganizationNER', w, ('.string', 'ORGANIZATION')) for w in ['organization', 'organizations']] +
     [Rule('$Punctuation', w) for w in ['.', ',', ';', '!', '?']] +
-    [Rule('$Tuple', w, '.tuple') for w in ['pair ?of', 'tuple ?of']] +
+    [Rule('$Tuple', w, '.tuple') for w in ['pair', 'tuple']] +
     # FIXME: Temporary hardcode
     [Rule('$ChemicalEntity', w, ('.string', 'Chemical')) for w in ['chemical', 'chemicals']] +
     [Rule('$DiseaseEntity', w, ('.string', 'Disease')) for w in ['disease', 'diseases']] +
-    [Rule('$CID', w, '.cid') for w in ['cid', 'cids', 'canonical id', 'canonical ids ?of']]
+    [Rule('$CID', w, '.cid') for w in ['cid', 'cids', 'canonical id', 'canonical ids']]
     # FIXME
 )
 
@@ -124,8 +126,9 @@ unary_rules = [
 ]
 
 compositional_rules = [
+    # Rule('$ROOT', '$Start $LF $Stop', lambda sems: ('.root', sems[1])),
     Rule('$LF', '$Label $Bool $Because $Bool ?$Punctuation', lambda sems: (sems[0], sems[1], sems[3])),
-    
+
     ### Logicals ###
     Rule('$Bool', '$Bool $Conj $Bool', lambda sems: (sems[1], sems[0], sems[2])),
     Rule('$Bool', '$Not $Bool', sems_in_order),

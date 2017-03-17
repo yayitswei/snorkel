@@ -31,14 +31,13 @@ DEV = 1
 TEST = 2
 
 class SnorkelModel(object):
-    def __init__(self, session, candidate_class, **kwargs):
+    def __init__(self, session, candidate_class, config):
         self.session = session
         self.candidate_class = candidate_class
+        self.config = config
 
-        self.splits = kwargs.get('splits', 3)
-        self.parallelism = kwargs.get('parallelism', 1)
-        self.seed = kwargs.get('seed', 0)
-        self.verbose = kwargs.get('verbose', True)
+        # self.seed = kwargs.get('seed', 0)
+        # self.config['verbose'] = kwargs.get('verbose', True)
 
         self.LFs = None
         self.labeler = None
@@ -47,26 +46,26 @@ class SnorkelModel(object):
     def parse(self, doc_preprocessor, fn=None, clear=True):
         corpus_parser = CorpusParser(fn=fn)
         corpus_parser.apply(doc_preprocessor, count=doc_preprocessor.max_docs, 
-                            parallelism=self.parallelism, clear=clear)
+                            parallelism=self.config['parallelism'], clear=clear)
 
     def extract(self, cand_extractor, sents, split, clear=True):
-        cand_extractor.apply(sents, split=split, parallelism=self.parallelism, clear=clear)
+        cand_extractor.apply(sents, split=split, parallelism=self.config['parallelism'], clear=clear)
 
     def load_gold(self):
         raise NotImplementedError
 
     def featurize(self, featurizer, split):
         if split == TRAIN:
-            F = featurizer.apply(split=split, parallelism=self.parallelism)
+            F = featurizer.apply(split=split, parallelism=self.config['parallelism'])
         else:
-            F = featurizer.apply_existing(split=split, parallelism=self.parallelism)
+            F = featurizer.apply_existing(split=split, parallelism=self.config['parallelism'])
         return F
 
     def label(self, labeler, split):
         if split == TRAIN:
-            L = labeler.apply(split=split, parallelism=self.parallelism)
+            L = labeler.apply(split=split, parallelism=self.config['parallelism'])
         else:
-            L = labeler.apply_existing(split=split, parallelism=self.parallelism)
+            L = labeler.apply_existing(split=split, parallelism=self.config['parallelism'])
         return L
 
     def generative(self):
@@ -76,23 +75,19 @@ class SnorkelModel(object):
         raise NotImplementedError
 
 class CDRModel(SnorkelModel):
-    def __init__(self, session, candidate_class, **kwargs):
-        self.traditional = kwargs['traditional']
-        self.max_train = kwargs['max_train']
-        SnorkelModel.__init__(self, session, candidate_class, **kwargs)
 
-    def parse(self, file_path='data/CDR.BioC.xml', max_docs=float('inf'), clear=True):
+    def parse(self, file_path='data/CDR.BioC.xml', clear=True):
         doc_preprocessor = XMLMultiDocPreprocessor(
             path=file_path,
             doc='.//document',
             text='.//passage/text/text()',
             id='.//id/text()',
-            max_docs=max_docs
+            max_docs=self.config['max_docs']
         )
         tagger_one = TaggerOneTagger()
         fn=tagger_one.tag
         SnorkelModel.parse(self, doc_preprocessor, fn=fn, clear=clear)
-        if self.verbose:
+        if self.config['verbose']:
             print("Documents: {}".format(self.session.query(Document).count()))
             print("Sentences: {}".format(self.session.query(Sentence).count()))
 
@@ -116,35 +111,43 @@ class CDRModel(SnorkelModel):
 
         candidate_extractor = PretaggedCandidateExtractor(self.candidate_class, ['Chemical', 'Disease'])
         for split, sents in enumerate([train_sents, dev_sents, test_sents]):
-            if len(sents) > 0 and split < self.splits:
+            if len(sents) > 0 and split < self.config['splits']:
                 SnorkelModel.extract(self, candidate_extractor, sents, split=split, clear=clear)
                 nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
-                if self.verbose:
+                if self.config['verbose']:
                     print("Candidates [Split {}]: {}".format(split, nCandidates))
 
     def load_gold(self, split=None):
         if not split:
-            splits = range(self.splits)
+            splits = range(self.config['splits'])
         else:
             splits = [split] if not isinstance(split, list) else split
         for split in splits:
-            print("Split {}:".format(split))
-            load_external_labels(self.session, self.candidate_class, split=split, annotator='gold')
+            nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
+            if nCandidates > 0:
+                print("Split {}:".format(split))
+                load_external_labels(self.session, self.candidate_class, split=split, annotator='gold')
 
-    def featurize(self):
+    def featurize(self, config=None):
+        if config:
+            self.config = config        
         featurizer = FeatureAnnotator()
-        for split in range(self.splits):
-            F = SnorkelModel.featurize(self, featurizer, split)
-            nCandidates, nFeatures = F.shape
-            if self.verbose:
-                print("\nFeaturized split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nFeatures, F.nnz))
+        for split in range(self.config['splits']):
+            nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
+            if nCandidates > 0:
+                F = SnorkelModel.featurize(self, featurizer, split)
+                nCandidates, nFeatures = F.shape
+                if self.config['verbose']:
+                    print("\nFeaturized split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nFeatures, F.nnz))
         self.featurizer = featurizer
 
-    def generate_lfs(self, source='py', include=[], max_lfs=None, remove_paren=True):
-        if source == 'py':
+    def generate_lfs(self, config=None):
+        if config:
+            self.config = config
+        if self.config['source'] == 'py':
             from cdr_lfs import get_cdr_lfs
             LFs = get_cdr_lfs()
-        elif source == 'nl':
+        elif self.config['source'] == 'nl':
             with bz2.BZ2File(os.environ['SNORKELHOME'] + '/tutorials/cdr/data/ctd.pkl.bz2', 'rb') as ctd_f:
                 ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
             user_lists = {
@@ -172,7 +175,7 @@ class CDRModel(SnorkelModel):
                         show_passing=False,
                         show_correct=False,
                         pseudo_python=False,
-                        remove_paren=remove_paren,
+                        remove_paren=False,
                         only=[])
             (correct, passing, failing, redundant, erroring, unknown) = sp.LFs
             LFs = []
@@ -181,7 +184,7 @@ class CDRModel(SnorkelModel):
                                      ('failing', failing),
                                      ('erroring', erroring),
                                      ('unkonwn', unknown)]:
-                if name in include:
+                if name in self.config['include']:
                     LFs += lf_group
                 else:
                     if len(lf_group) > 0:
@@ -189,49 +192,52 @@ class CDRModel(SnorkelModel):
             from cdr_lfs import LF_closer_chem, LF_closer_dis
             LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
         else:
-            raise Exception("Argument for 'lfs' must be in {'py', 'nl'}")
-        if max_lfs:
-            random.shuffle(LFs)
-            LFs = LFs[:max_lfs]
+            raise Exception("Parameter 'source' must be in {'py', 'nl'}")
         self.LFs = LFs
 
-    def label(self):
+    def label(self, config=None):
+        if config:
+            self.config = config
+        
         if self.LFs is None:
             raise ValueError("Must run generate_LFs() before calling generative model.")        
         labeler = LabelAnnotator(f=self.LFs)
-        for split in range(self.splits):
-            L = SnorkelModel.label(self, labeler, split)
-            nCandidates, nLabels = L.shape
-            if self.verbose:
-                print("\nLabeled split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nLabels, L.nnz))
-                training_set_summary_stats(L, return_vals=False, verbose=True)
+        for split in range(self.config['splits']):
+            nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
+            if nCandidates > 0:
+                L = SnorkelModel.label(self, labeler, split)
+                nCandidates, nLabels = L.shape
+                if self.config['verbose']:
+                    print("\nLabeled split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nLabels, L.nnz))
+                    training_set_summary_stats(L, return_vals=False, verbose=True)
         self.labeler = labeler
 
-    def supervise(self, lfs='py', 
-                   model_dep=False, 
-                   majority_vote=False, 
-                   empirical_from_train=False, 
-                   threshold=(1.0/3.0),
-                   display_correlation=False):
+    def supervise(self, config=None):
+        if config:
+            self.config = config
+
         if not self.labeler:
             self.labeler = LabelAnnotator(f=None)
         L_train = self.labeler.load_matrix(self.session, split=TRAIN)
-        # TEMP:
-        # L_train = self.labeler.load_matrix(self.session, split=DEV) # NOTE: this is temporary hack
+        
+        if self.config['max_train']:
+            rows = np.random.choice(range(L_train.shape[1]), (self.config['max_train'],), replace=False)
+            L_train = L_train[rows,:]
+            import pdb; pdb.set_trace()
 
-        if self.traditional:
+        if self.config['traditional']:
             # Do traditional supervision with hard labels
             L_gold_train = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
             train_marginals = np.array(L_gold_train.todense()).reshape((L_gold_train.shape[0],))
             train_marginals[train_marginals==-1] = 0
         else:
-            if majority_vote:
+            if self.config['majority_vote']:
                 train_marginals = np.where(np.ravel(np.sum(L_train, axis=1)) <= 0, 0.0, 1.0)
             else:
-                if model_dep:
+                if self.config['model_dep']:
                     ds = DependencySelector()
-                    deps = ds.select(L_train, threshold=threshold)
-                    if self.verbose:
+                    deps = ds.select(L_train, threshold=self.config['threshold'])
+                    if self.config['verbose']:
                         self.display_dependencies(deps)
                 else:
                     deps = ()
@@ -243,95 +249,98 @@ class CDRModel(SnorkelModel):
 
                 train_marginals = gen_model.marginals(L_train)
                 
-            if majority_vote:
+            if self.config['majority_vote']:
                 self.LF_stats = None
             else:
-                if self.verbose:
-                    if empirical_from_train:
+                if self.config['verbose']:
+                    if self.config['empirical_from_train']:
                         L = self.labeler.load_matrix(self.session, split=TRAIN)
                         L_gold = load_gold_labels(self.session, annotator_name='gold', split=TRAIN)
                     else:
                         L = self.labeler.load_matrix(self.session, split=DEV)
                         L_gold = load_gold_labels(self.session, annotator_name='gold', split=DEV)
                     self.LF_stats = L.lf_stats(self.session, L_gold, gen_model.weights.lf_accuracy())
-                    if display_correlation:
+                    if self.config['display_correlation']:
                         self.display_accuracy_correlation()
             
         save_marginals(self.session, L_train, train_marginals)
 
-        if self.verbose:
-            # Display marginals
-            plt.hist(train_marginals, bins=20)
-            plt.show()
+        if self.config['verbose']:
+            if self.config['display_marginals']:
+                # Display marginals
+                plt.hist(train_marginals, bins=20)
+                plt.show()
 
-    def classify(self, model='logreg', search_n=20, 
-                       lr=0.01, l1_penalty=0.0, l2_penalty=0.0, 
-                       n_epochs=50, rebalance=True, print_freq=25):
+    def classify(self, config=None):
+        if config:
+            self.config = config
 
         train_marginals = load_marginals(self.session, split=TRAIN)
 
-        if self.splits > DEV:
+        if self.config['splits'] > DEV:
             L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
-        if self.splits > TEST:
+        if self.config['splits'] > TEST:
             L_gold_test = load_gold_labels(self.session, annotator_name='gold', split=TEST)
-        # dev = self.session.query(self.candidate_class).filter(self.candidate_class.split == 1).all()
-        # if dev[0] != L_gold_dev.get_candidate(self.session, 0):
-        #     print("FAILING!")
-        # else:
-        #     print("PASSING!")
 
-        if model=='logreg':
+        if self.config['model']=='logreg':
             disc_model = SparseLogisticRegression()
-            # TEMP
             self.model = disc_model
-            # TEMP
 
             if not self.featurizer:
                 self.featurizer = FeatureAnnotator()
-            if self.splits > TRAIN:
+            if self.config['splits'] > TRAIN:
                 F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
-            if self.splits > DEV:
+            if self.config['splits'] > DEV:
                 F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
-            if self.splits > TEST:
+            if self.config['splits'] > TEST:
                 F_test =  self.featurizer.load_matrix(self.session, split=TEST)
-            # TEMP
-            # import pdb; pdb.set_trace()
-            # print(hash(F_dev))
-            # TEMP
 
-            if self.traditional:
-                train_size = self.traditional
+            if self.config['traditional']:
+                train_size = self.config['traditional']
                 F_train = F_train[:train_size, :]
                 train_marginals = train_marginals[:train_size]
                 print("Using {0} hard-labeled examples for supervision\n".format(train_marginals.shape[0]))
 
-            if search_n > 1:
-                rate_param = RangeParameter('lr', 1e-6, 1e-1, step=1, log_base=10)
-                l1_param  = RangeParameter('l1_penalty', 1e-6, 1e-1, step=1, log_base=10)
-                l2_param  = RangeParameter('l2_penalty', 1e-6, 1e-1, step=1, log_base=10)
+            if self.config['n_search'] > 1:
+                lr_min = min(self.config['lr']) if self.config['lr'] else 1e-6
+                lr_max = max(self.config['lr']) if self.config['lr'] else 1e-2
+                l1_min = min(self.config['l1_penalty']) if self.config['l1_penalty'] else 1e-6
+                l1_max = max(self.config['l1_penalty']) if self.config['l1_penalty'] else 1e-2
+                l2_min = min(self.config['l2_penalty']) if self.config['l2_penalty'] else 1e-6
+                l2_max = max(self.config['l2_penalty']) if self.config['l2_penalty'] else 1e-2
+                lr_param = RangeParameter('lr', lr_min, lr_max, step=1, log_base=10)
+                l1_param  = RangeParameter('l1_penalty', l1_min, l1_max, step=1, log_base=10)
+                l2_param  = RangeParameter('l2_penalty', l2_min, l2_max, step=1, log_base=10)
             
-                searcher = RandomSearch(self.session, disc_model, F_train, train_marginals, 
-                                        [rate_param, l1_param, l2_param], n=search_n)
+                searcher = RandomSearch(self.session, disc_model, 
+                                        F_train, train_marginals, 
+                                        [lr_param, l1_param, l2_param], 
+                                        n=self.config['n_search'])
 
                 print("\nRandom Search:")
-                search_stats = searcher.fit(F_dev, L_gold_dev, n_epochs=n_epochs, 
-                                            rebalance=rebalance, print_freq=print_freq)
+                search_stats = searcher.fit(F_dev, L_gold_dev, 
+                                            n_epochs=self.config['n_epochs'], 
+                                            rebalance=self.config['rebalance'],
+                                            print_freq=self.config['print_freq'])
 
-                if self.verbose:
+                if self.config['verbose']:
                     print(search_stats)
                 
                 disc_model = searcher.model
                     
             else:
                 disc_model.train(F_train, train_marginals, 
-                                 lr=lr, l1_penalty=l1_penalty, l2_penalty=l2_penalty,
-                                 n_epochs=n_epochs, rebalance=rebalance)
+                                 lr=self.config['lr'], 
+                                 l1_penalty=self.config['l1_penalty'], 
+                                 l2_penalty=self.config['l2_penalty'],
+                                 n_epochs=self.config['n_epochs'], 
+                                 rebalance=self.config['rebalance'])
             
-            if self.splits > DEV:
+            if self.config['splits'] > DEV:
                 print("\nDev:")
                 TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev, train_marginals=train_marginals)
             
-            if self.splits > TEST:
+            if self.config['splits'] > TEST:
                 print("\nTest:")
                 TP, FP, TN, FN = disc_model.score(self.session, F_test, L_gold_test, train_marginals=train_marginals)
 

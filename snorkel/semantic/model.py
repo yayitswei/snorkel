@@ -111,7 +111,7 @@ class CDRModel(SnorkelModel):
 
         candidate_extractor = PretaggedCandidateExtractor(self.candidate_class, ['Chemical', 'Disease'])
         for split, sents in enumerate([train_sents, dev_sents, test_sents]):
-            if len(sents) > 0 and split < self.config['splits']:
+            if len(sents) > 0 and split in self.config['splits']:
                 SnorkelModel.extract(self, candidate_extractor, sents, split=split, clear=clear)
                 nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
                 if self.config['verbose']:
@@ -119,7 +119,7 @@ class CDRModel(SnorkelModel):
 
     def load_gold(self, split=None):
         if not split:
-            splits = range(self.config['splits'])
+            splits = self.config['splits']
         else:
             splits = [split] if not isinstance(split, list) else split
         for split in splits:
@@ -132,7 +132,7 @@ class CDRModel(SnorkelModel):
         if config:
             self.config = config
         if not split:
-            splits = range(self.config['splits'])
+            splits = self.config['splits']
         else:
             splits = [split] if not isinstance(split, list) else split         
         featurizer = FeatureAnnotator()
@@ -179,7 +179,7 @@ class CDRModel(SnorkelModel):
                         show_passing=False,
                         show_correct=False,
                         pseudo_python=False,
-                        remove_paren=False,
+                        remove_paren=self.config['remove_paren'],
                         only=[])
             (correct, passing, failing, redundant, erroring, unknown) = sp.LFs
             LFs = []
@@ -212,7 +212,7 @@ class CDRModel(SnorkelModel):
             self.generate_lfs()
             print("Running generate_lfs() first...")        
         labeler = LabelAnnotator(f=self.LFs)
-        for split in range(self.config['splits']):
+        for split in self.config['splits']:
             nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
             if nCandidates > 0:
                 L = SnorkelModel.label(self, labeler, split)
@@ -221,6 +221,26 @@ class CDRModel(SnorkelModel):
                     print("\nLabeled split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nLabels, L.nnz))
                     training_set_summary_stats(L, return_vals=False, verbose=True)
         self.labeler = labeler
+
+        if self.config['remove_twins']:
+            signatures = set()
+            L_train_coo = coo_matrix(L_train)
+            row = L_train_coo.row
+            col = L_train_coo.col
+            data = L_train_coo.data
+            for i in range(L_train.shape[1]):
+                signature = hash((hash(tuple(row[col==i])),hash(tuple(data[col==i]))))
+                if signature in signatures:
+                    # Add i to list of columns to remove
+                    raise NotImplementedError
+                else:
+                    signatures.add(signature)
+
+        if self.config['remove_useless']:
+            for i in range(L_train.shape[1]):
+                if np.sum(L_train[:,i]) == L_train.shape[0]:
+                    # Add i to list of columns to remove
+                    raise NotImplementedError
 
     def supervise(self, config=None):
         if config:
@@ -287,9 +307,9 @@ class CDRModel(SnorkelModel):
         np.random.seed(self.config['seed'])
         # TEMP
 
-        if self.config['splits'] > DEV:
+        if DEV in self.config['splits']:
             L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
-        if self.config['splits'] > TEST:
+        if TEST in self.config['splits']:
             L_gold_test = load_gold_labels(self.session, annotator_name='gold', split=TEST)
 
         if self.config['model']=='logreg':
@@ -298,11 +318,11 @@ class CDRModel(SnorkelModel):
 
             if not self.featurizer:
                 self.featurizer = FeatureAnnotator()
-            if self.config['splits'] > TRAIN:
+            if TRAIN in self.config['splits']:
                 F_train =  self.featurizer.load_matrix(self.session, split=TRAIN)
-            if self.config['splits'] > DEV:
+            if DEV in self.config['splits']:
                 F_dev =  self.featurizer.load_matrix(self.session, split=DEV)
-            if self.config['splits'] > TEST:
+            if TEST in self.config['splits']:
                 F_test =  self.featurizer.load_matrix(self.session, split=TEST)
 
             if self.config['traditional']:
@@ -351,13 +371,13 @@ class CDRModel(SnorkelModel):
                                  rebalance=self.config['rebalance'],
                                  seed=self.config['seed'])
             
-            if self.config['splits'] > DEV:
+            if DEV in self.config['splits']:
                 print("\nDev:")
-                TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev, train_marginals=train_marginals)
+                TP, FP, TN, FN = disc_model.score(self.session, F_dev, L_gold_dev, train_marginals=train_marginals, b=self.config['b'])
             
-            if self.config['splits'] > TEST:
+            if TEST in self.config['splits']:
                 print("\nTest:")
-                TP, FP, TN, FN = disc_model.score(self.session, F_test, L_gold_test, train_marginals=train_marginals)
+                TP, FP, TN, FN = disc_model.score(self.session, F_test, L_gold_test, train_marginals=train_marginals, b=self.config['b'])
 
         else:
             raise NotImplementedError

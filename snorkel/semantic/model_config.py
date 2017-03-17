@@ -5,6 +5,7 @@ configuration = {
     'max_docs': 1500,
     'splits': 3,
     'verbose': True,
+    'seed': 0,
 
     # Supervision
     'source': 'py',
@@ -22,7 +23,7 @@ configuration = {
     # Classification,
     'model': 'logreg',
     'n_search': 10,
-    'n_epochs': 5,
+    'n_epochs': 50,
     'rebalance': True,
     'lr': None,
     'l1_penalty': None,

@@ -36,8 +36,8 @@ class SnorkelModel(object):
         self.candidate_class = candidate_class
         self.config = config
 
-        # self.seed = kwargs.get('seed', 0)
-        # self.config['verbose'] = kwargs.get('verbose', True)
+        if config['seed']:
+            np.random.seed(config['seed'])
 
         self.LFs = None
         self.labeler = None
@@ -128,11 +128,15 @@ class CDRModel(SnorkelModel):
                 print("Split {}:".format(split))
                 load_external_labels(self.session, self.candidate_class, split=split, annotator='gold')
 
-    def featurize(self, config=None):
+    def featurize(self, split=None, config=None):
         if config:
-            self.config = config        
+            self.config = config
+        if not split:
+            splits = range(self.config['splits'])
+        else:
+            splits = [split] if not isinstance(split, list) else split         
         featurizer = FeatureAnnotator()
-        for split in range(self.config['splits']):
+        for split in splits:
             nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
             if nCandidates > 0:
                 F = SnorkelModel.featurize(self, featurizer, split)
@@ -193,6 +197,11 @@ class CDRModel(SnorkelModel):
             LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
         else:
             raise Exception("Parameter 'source' must be in {'py', 'nl'}")
+        
+        if self.config['max_lfs']:
+            np.random.seed(self.config['seed'])
+            np.random.shuffle(LFs)
+            LFs = LFs[:self.config['max_lfs']]
         self.LFs = LFs
 
     def label(self, config=None):
@@ -200,7 +209,8 @@ class CDRModel(SnorkelModel):
             self.config = config
         
         if self.LFs is None:
-            raise ValueError("Must run generate_LFs() before calling generative model.")        
+            self.generate_lfs()
+            print("Running generate_lfs() first...")        
         labeler = LabelAnnotator(f=self.LFs)
         for split in range(self.config['splits']):
             nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
@@ -219,11 +229,6 @@ class CDRModel(SnorkelModel):
         if not self.labeler:
             self.labeler = LabelAnnotator(f=None)
         L_train = self.labeler.load_matrix(self.session, split=TRAIN)
-        
-        if self.config['max_train']:
-            rows = np.random.choice(range(L_train.shape[1]), (self.config['max_train'],), replace=False)
-            L_train = L_train[rows,:]
-            import pdb; pdb.set_trace()
 
         if self.config['traditional']:
             # Do traditional supervision with hard labels
@@ -277,6 +282,11 @@ class CDRModel(SnorkelModel):
 
         train_marginals = load_marginals(self.session, split=TRAIN)
 
+        # TEMP
+        # np.random.seed(kwargs.pop('seed', 0))
+        np.random.seed(self.config['seed'])
+        # TEMP
+
         if self.config['splits'] > DEV:
             L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)
         if self.config['splits'] > TEST:
@@ -302,7 +312,7 @@ class CDRModel(SnorkelModel):
                 print("Using {0} hard-labeled examples for supervision\n".format(train_marginals.shape[0]))
 
             if self.config['n_search'] > 1:
-                lr_min = min(self.config['lr']) if self.config['lr'] else 1e-6
+                lr_min = min(self.config['lr']) if self.config['lr'] else 1e-5
                 lr_max = max(self.config['lr']) if self.config['lr'] else 1e-2
                 l1_min = min(self.config['l1_penalty']) if self.config['l1_penalty'] else 1e-6
                 l1_max = max(self.config['l1_penalty']) if self.config['l1_penalty'] else 1e-2
@@ -321,7 +331,8 @@ class CDRModel(SnorkelModel):
                 search_stats = searcher.fit(F_dev, L_gold_dev, 
                                             n_epochs=self.config['n_epochs'], 
                                             rebalance=self.config['rebalance'],
-                                            print_freq=self.config['print_freq'])
+                                            print_freq=self.config['print_freq'],
+                                            seed=self.config['seed'])
 
                 if self.config['verbose']:
                     print(search_stats)
@@ -329,12 +340,16 @@ class CDRModel(SnorkelModel):
                 disc_model = searcher.model
                     
             else:
+                lr = self.config['lr'] if self.config['lr'] else 1e-2
+                l1_penalty = self.config['l1_penalty'] if self.config['l1_penalty'] else 1e-3
+                l2_penalty = self.config['l2_penalty'] if self.config['l2_penalty'] else 1e-5
                 disc_model.train(F_train, train_marginals, 
-                                 lr=self.config['lr'], 
-                                 l1_penalty=self.config['l1_penalty'], 
-                                 l2_penalty=self.config['l2_penalty'],
+                                 lr=lr, 
+                                 l1_penalty=l1_penalty, 
+                                 l2_penalty=l2_penalty,
                                  n_epochs=self.config['n_epochs'], 
-                                 rebalance=self.config['rebalance'])
+                                 rebalance=self.config['rebalance'],
+                                 seed=self.config['seed'])
             
             if self.config['splits'] > DEV:
                 print("\nDev:")
@@ -366,6 +381,9 @@ class CDRModel(SnorkelModel):
             2: 'DEP_REINFORCING',
             3: 'DEP_EXCLUSIVE',
         }
+        if not self.LFs:
+            self.generate_lfs()
+            print("Running generate_lfs() first...")   
         LF_names = {i:lf.__name__ for i, lf in enumerate(self.LFs)}
         deps_decoded = []
         for dep in deps_encoded:

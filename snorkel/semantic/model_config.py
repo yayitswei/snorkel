@@ -1,6 +1,5 @@
 configuration = {
     # general
-    'db': None,
     'parallelism': 1,
     'max_docs': 1500,
     'splits': [0,1],
@@ -29,8 +28,8 @@ configuration = {
     'n_epochs': 50,
     'rebalance': True,
     'b': 0.5,
-    'lr': None,
-    'l1_penalty': None,
-    'l2_penalty': None,
+    'lr': [1e-5, 1e-2],
+    'l1_penalty': [1e-6, 1e-2],
+    'l2_penalty': [1e-6, 1e-2],
     'print_freq': 5,
 }

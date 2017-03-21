@@ -75,8 +75,7 @@ class SnorkelModel(object):
         raise NotImplementedError
 
 class CDRModel(SnorkelModel):
-
-    def parse(self, file_path='data/CDR.BioC.xml', clear=True):
+    def parse(self, file_path=(os.environ['SNORKELHOME'] + '/tutorials/cdr/data/CDR.BioC.xml'), clear=True):
         doc_preprocessor = XMLMultiDocPreprocessor(
             path=file_path,
             doc='.//document',
@@ -92,7 +91,7 @@ class CDRModel(SnorkelModel):
             print("Sentences: {}".format(self.session.query(Sentence).count()))
 
     def extract(self, clear=True):
-        with open('data/doc_ids.pkl', 'rb') as f:
+        with open(os.environ['SNORKELHOME'] + '/tutorials/cdr/data/doc_ids.pkl', 'rb') as f:
             train_ids, dev_ids, test_ids = cPickle.load(f)
         train_ids, dev_ids, test_ids = set(train_ids), set(dev_ids), set(test_ids)
 
@@ -193,6 +192,7 @@ class CDRModel(SnorkelModel):
                 else:
                     if len(lf_group) > 0:
                         print("Discarding {0} {1} LFs...".format(len(lf_group), name))
+            print("Keeping {0} LFs...".format(len(lf_group)))
             from cdr_lfs import LF_closer_chem, LF_closer_dis
             LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
         else:
@@ -332,12 +332,9 @@ class CDRModel(SnorkelModel):
                 print("Using {0} hard-labeled examples for supervision\n".format(train_marginals.shape[0]))
 
             if self.config['n_search'] > 1:
-                lr_min = min(self.config['lr']) if self.config['lr'] else 1e-5
-                lr_max = max(self.config['lr']) if self.config['lr'] else 1e-2
-                l1_min = min(self.config['l1_penalty']) if self.config['l1_penalty'] else 1e-6
-                l1_max = max(self.config['l1_penalty']) if self.config['l1_penalty'] else 1e-2
-                l2_min = min(self.config['l2_penalty']) if self.config['l2_penalty'] else 1e-6
-                l2_max = max(self.config['l2_penalty']) if self.config['l2_penalty'] else 1e-2
+                lr_min, lr_max = min(self.config['lr']), max(self.config['lr'])
+                l1_min, l1_max = min(self.config['l1_penalty']), max(self.config['l1_penalty'])
+                l2_min, l2_max = min(self.config['l2_penalty']), max(self.config['l2_penalty'])
                 lr_param = RangeParameter('lr', lr_min, lr_max, step=1, log_base=10)
                 l1_param  = RangeParameter('l1_penalty', l1_min, l1_max, step=1, log_base=10)
                 l2_param  = RangeParameter('l2_penalty', l2_min, l2_max, step=1, log_base=10)
@@ -360,9 +357,9 @@ class CDRModel(SnorkelModel):
                 disc_model = searcher.model
                     
             else:
-                lr = self.config['lr'] if self.config['lr'] else 1e-2
-                l1_penalty = self.config['l1_penalty'] if self.config['l1_penalty'] else 1e-3
-                l2_penalty = self.config['l2_penalty'] if self.config['l2_penalty'] else 1e-5
+                lr = self.config['lr'] if len(self.config['lr'])==1 else 1e-2
+                l1_penalty = self.config['l1_penalty'] if len(self.config['l1_penalty'])==1 else 1e-3
+                l2_penalty = self.config['l2_penalty'] if len(self.config['l2_penalty'])==1 else 1e-5
                 disc_model.train(F_train, train_marginals, 
                                  lr=lr, 
                                  l1_penalty=l1_penalty, 

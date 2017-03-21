@@ -9,6 +9,7 @@ configuration = {
     # Supervision
     'source': 'py',
     'include': ['correct', 'passing'],
+    'include_closer_lfs': True,
     'remove_twins': False,
     'remove_useless': False,
     'remove_paren': False,

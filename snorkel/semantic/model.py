@@ -150,6 +150,10 @@ class CDRModel(SnorkelModel):
         if self.config['source'] == 'py':
             from cdr_lfs import get_cdr_lfs
             LFs = get_cdr_lfs()
+            if not self.config['include_closer_lfs']:
+                for lf in list(LFs):
+                    if lf.__name__ in ['LF_closer_chem', 'LF_closer_dis']:
+                        LFs.remove(lf)
         elif self.config['source'] == 'nl':
             with bz2.BZ2File(os.environ['SNORKELHOME'] + '/tutorials/cdr/data/ctd.pkl.bz2', 'rb') as ctd_f:
                 ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
@@ -186,15 +190,16 @@ class CDRModel(SnorkelModel):
                                      ('passing', passing),
                                      ('failing', failing),
                                      ('erroring', erroring),
-                                     ('unkonwn', unknown)]:
+                                     ('unknown', unknown)]:
                 if name in self.config['include']:
                     LFs += lf_group
                 else:
                     if len(lf_group) > 0:
                         print("Discarding {0} {1} LFs...".format(len(lf_group), name))
             print("Keeping {0} LFs...".format(len(lf_group)))
-            from cdr_lfs import LF_closer_chem, LF_closer_dis
-            LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
+            if self.config['include_closer_LFs']:
+                from cdr_lfs import LF_closer_chem, LF_closer_dis
+                LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
         else:
             raise Exception("Parameter 'source' must be in {'py', 'nl'}")
         
@@ -203,6 +208,7 @@ class CDRModel(SnorkelModel):
             np.random.shuffle(LFs)
             LFs = LFs[:self.config['max_lfs']]
         self.LFs = LFs
+        print("Using {0} LFs".format(len(self.LFs)))
 
     def label(self, config=None):
         if config:

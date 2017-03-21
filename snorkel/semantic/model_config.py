@@ -17,7 +17,7 @@ configuration = {
     'max_train': None,
     'model_dep': False,
     'majority_vote': False,
-    'traditional': False,
+    'traditional': False, # e.g, 1000
     'threshold': 1.0/3.0,
     'display_correlation': False,
     'display_marginals': False,

@@ -1,7 +1,8 @@
-import cPickle
-
 from snorkel.db_helpers import reload_annotator_labels
 from snorkel.models import StableLabel
+
+import cPickle
+import os
 
 
 def load_external_labels(session, candidate_class, split, annotator='gold',

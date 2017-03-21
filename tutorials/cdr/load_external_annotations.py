@@ -6,6 +6,8 @@ from snorkel.models import StableLabel
 
 def load_external_labels(session, candidate_class, split, annotator='gold',
     label_fname='data/cdr_relations_gold.pkl', id_fname='data/doc_ids.pkl'):
+    label_fname = os.environ['SNORKELHOME'] + '/tutorials/cdr/' + label_fname
+    id_fname = os.environ['SNORKELHOME'] + '/tutorials/cdr/' + id_fname
     # Load document-level relation annotations
     with open(label_fname, 'rb') as f:
         relations = cPickle.load(f)

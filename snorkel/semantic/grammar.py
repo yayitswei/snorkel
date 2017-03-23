@@ -12,12 +12,13 @@ from types import FunctionType
 
 class Grammar(object):
     def __init__(self, rules=[], ops={}, candidate_class=None, annotators=[], 
-                 user_lists={}, absorb=True, start_symbol='$ROOT'):
+                 user_lists={}, beam_width=None, top_k=None, start_symbol='$ROOT'):
         self.ops = ops
         self.candidate_class = candidate_class # candidate_class.__argnames__ = ['chemical', 'disease']
         self.annotators = annotators
         self.user_lists = user_lists
-        self.absorb = absorb
+        self.beam_width = beam_width
+        self.top_k = top_k
         self.categories = set()
         self.lexical_rules = defaultdict(list)
         self.unary_rules = defaultdict(list)
@@ -52,12 +53,23 @@ class Grammar(object):
                 self.apply_user_lists(chart, words, i, j) # words[i:j] is the name of a UserList?
                 self.apply_lexical_rules(chart, words, i, j) # words[i:j] matches lexical rule?
                 self.apply_binary_rules(chart, i, j) # any split of words[i:j] matches binary rule?
-                self.apply_stopword_rules(chart, stopword_locs, i, j)
+                self.apply_absorb_rules(chart, stopword_locs, i, j)
                 self.apply_unary_rules(chart, i, j) # add additional tags if chart[(i,j)] matches unary rule
+                if self.beam_width:
+                    self.apply_beam(chart, i, j)
         parses = chart[(0, len(tokens))]
         if self.start_symbol:
             parses = [parse for parse in parses if parse.rule.lhs == self.start_symbol]
         self.chart = chart
+        if self.top_k:
+            # If top_k is negative, accept all parses that are tied for the 
+            # fewest absorptions, then second fewest absorptions, ..., then k-fewest absorptions
+            if self.top_k < 0:
+                k = abs(self.top_k)
+                levels = sorted(list(set(p.absorbed for p in parses)))
+                parses = [p for p in parses if p.absorbed in levels[:k]]
+            else:
+                parses = sorted(parses, key=lambda x: x.absorbed)[:self.top_k]
         if len(parses) == 0:
             self.print_chart(nested=False)
             import pdb; pdb.set_trace()
@@ -178,15 +190,24 @@ class Grammar(object):
                 for rule in self.binary_rules[(parse_1.rule.lhs, parse_2.rule.lhs)]:
                     chart[(i, j)].append(Parse(rule, [parse_1, parse_2]))
     
-    def apply_stopword_rules(self, chart, stopword_locs, i, j):
+    def apply_absorb_rules(self, chart, stopword_locs, i, j):
         """Add parses to chart cell (i, j) by applying binary rules."""
-        if j - i > 2:
+        if j - i > 2: # Otherwise, there's no chance for absorption
             for m in range(i + 1, j - 1):
                 for n in range(m + 1, j):
-                    if all(stopword_locs[m:n]):
-                        for parse_1, parse_2 in product(chart[(i, m)], chart[(n, j)]):
-                            for rule in self.binary_rules[(parse_1.rule.lhs, parse_2.rule.lhs)]:
-                                chart[(i, j)].append(Parse(rule, [parse_1, parse_2]))
+                    # Don't absorb if we only want to absorb stopwords and these aren't all stopwords
+                    if not self.beam_width and not all(stopword_locs[m:n]):
+                        continue
+                    for parse_1, parse_2 in product(chart[(i, m)], chart[(n, j)]):
+                        # Don't absorb quote marks
+                        # if any(parse.rule.lhs=='$Quote' for p in range(m, n) for parse in chart[(p, p+1)]):
+                        #     break
+                        for rule in self.binary_rules[(parse_1.rule.lhs, parse_2.rule.lhs)]:
+                            # Don't allow $StringStub's to absorb (to control growth)
+                            if rule.lhs=='$StringStub':
+                                continue
+                            absorbed = n - m
+                            chart[(i, j)].append(Parse(rule, [parse_1, parse_2], absorbed))
 
     def apply_unary_rules(self, chart, i, j):
         """Add parses to chart cell (i, j) by applying unary rules."""
@@ -206,6 +227,9 @@ class Grammar(object):
         #     nEnd = len(chart[(i,j)])
         #     if nEnd == nStart:
         #         return
+
+    def apply_beam(self, chart, i, j):
+        chart[(i,j)] = sorted(chart[(i,j)], key=lambda x: x.absorbed)[:self.beam_width]
 
     def evaluate(self, parse):
         def recurse(semantics):
@@ -330,10 +354,11 @@ def is_optional(label):
 # Parse ========================================================================
 
 class Parse(object):
-    def __init__(self, rule, children):
+    def __init__(self, rule, children, absorbed=0):
         self.rule = rule
         self.children = tuple(children[:])
         self.semantics = self.compute_semantics()
+        self.absorbed = absorbed + sum(child.absorbed for child in self.children if isinstance(child, Parse))
         self.validate_parse()
 
     def __eq__(self, other):

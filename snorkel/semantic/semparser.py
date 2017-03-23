@@ -5,13 +5,15 @@ from annotator import *
 from pandas import DataFrame, Series
 
 class SemanticParser():
-    def __init__(self, candidate_class, user_lists={}):
+    def __init__(self, candidate_class, user_lists={}, beam_width=None, top_k=None):
         annotators = [TokenAnnotator(), StopwordAnnotator(), PunctuationAnnotator(), IntegerAnnotator()]
         self.grammar = Grammar(rules=snorkel_rules, 
                                ops=snorkel_ops, 
                                candidate_class=candidate_class,
+                               annotators=annotators,
                                user_lists=user_lists,
-                               annotators=annotators)
+                               beam_width=beam_width,
+                               top_k=top_k)
         self.explanation_counter = 0
         self.LFs = tuple([None] * 6)
 
@@ -125,12 +127,16 @@ class SemanticParser():
             # for parse in self.spurify(parses, spurious_sources=spurious_sources):
             # TEMP
             for parse in parses:
+                # TEMP
+                # if parse.absorbed > 0:
+                #     import pdb; pdb.set_trace()
+                # TEMP
                 if show_parse:
                     print("PARSE: {}\n".format(parse))
                 semantics_ = sem_to_str(parse.semantics) if pseudo_python else parse.semantics
                 # REDUNDANT
                 if parse.semantics in semantics:
-                    if show_redundant: print("R: {}".format(semantics_))
+                    if show_redundant: print("R: {}\n".format(semantics_))
                     nRedundant[i] += 1
                     redundant_LFs.append(parse.function)
                     continue
@@ -139,16 +145,17 @@ class SemanticParser():
                 try:
                     denotation = parse.function(example.candidate)
                 except:
-                    if show_erroring: print("E: {}".format(semantics_))
-                    print parse.semantics
-                    print parse.function(example.candidate) #to display traceback
-                    import pdb; pdb.set_trace()
+                    if show_erroring: 
+                        print("E: {}\n".format(semantics_))
+                        print parse.semantics
+                        print parse.function(example.candidate) #to display traceback
+                        import pdb; pdb.set_trace()
                     nErroring[i] += 1 
                     erroring_LFs.append(parse.function)
                     continue
                 # CORRECT             
                 if example.semantics and parse.semantics==example.semantics:
-                    if show_correct: print("C: {}".format(semantics_))
+                    if show_correct: print("C: {}\n".format(semantics_))
                     nCorrect[i] += 1
                     LF = parse.function
                     LF.__name__ = LF.__name__[:(LF.__name__).rindex('_')] + '*'
@@ -156,13 +163,13 @@ class SemanticParser():
                     continue
                 # PASSING
                 if denotation==example.denotation:
-                    if show_passing: print("P: {}".format(semantics_))
+                    if show_passing: print("P: {}\n".format(semantics_))
                     nPassing[i] += 1
                     passing_LFs.append(parse.function)
                     continue
                 else:
                 # FAILING
-                    if show_failing: print("F: {}".format(semantics_))
+                    if show_failing: print("F: {}\n".format(semantics_))
                     nFailing[i] += 1
                     failing_LFs.append(parse.function)
                     continue

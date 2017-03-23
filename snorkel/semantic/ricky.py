@@ -116,6 +116,7 @@ unary_rules = [
     # ArgX may be treated as an object or a string (referring to its textual contents)
     Rule('$String', '$ArgX', lambda sems: ('.arg_to_string', sems[0])),
     Rule('$ArgToString', '$CID', lambda sems: (sems[0],)),
+    Rule('$StringList', 'StringListStub', sems0),
     Rule('$StringList', 'StringListOr', sems0),
     Rule('$StringList', 'StringListAnd', sems0),
     Rule('$List', '$BoolList', sems0),
@@ -145,17 +146,16 @@ compositional_rules = [
     Rule('$StringStub', '$Quote $QueryToken', lambda sems: [sems[1]]),
     Rule('$StringStub', '$StringStub $QueryToken', lambda sems: sems[0] + [sems[1]]),
     Rule('$String', '$StringStub $Quote', lambda sems: ('.string', ' '.join(sems[0]))),
-    Rule('$String', '$Word $String', sems1),
 
         # building string lists (TODO: remove some redundancies here?)
-    Rule('$StringList', '$String ?$Separator $String', lambda sems: ('.list', sems[0], sems[2])),
-    Rule('$StringList', '$StringList ?$Separator $String', lambda sems: tuple((list(sems[0]) + [sems[2]]))),
+    Rule('$StringListStub', '$String ?$Separator $String', lambda sems: ('.list', sems[0], sems[2])),
+    Rule('$StringListStub', '$StringListStub ?$Separator $String', lambda sems: tuple((list(sems[0]) + [sems[2]]))),
     
     Rule('$StringListOr', '$String ?$Separator $Or $String', lambda sems: ('.list', sems[0], sems[3])),
-    Rule('$StringListOr', '$StringList ?$Separator $Or $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
+    Rule('$StringListOr', '$StringListStub ?$Separator $Or $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
 
     Rule('$StringListAnd', '$String ?$Separator $And $String', lambda sems: ('.list', sems[0], sems[3])),
-    Rule('$StringListAnd', '$StringList ?$Separator $And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
+    Rule('$StringListAnd', '$StringListStub ?$Separator $And $String', lambda sems: tuple(list(sems[0]) + [sems[3]])),
 
         # applying $StringToBool functions
     Rule('$Bool', '$String $StringToBool', lambda sems: ('.call', sems[1], sems[0])),
@@ -172,9 +172,6 @@ compositional_rules = [
     Rule('$StringToBool', '$BinaryStringToBool $StringListOr', lambda sems: ('.composite_or',  (sems[0],), sems[1])),
     Rule('$StringToBool', '$BinaryStringToBool $UserList', lambda sems: ('.composite_or',  (sems[0],), sems[1])),
     
-        # absorb redundancy
-    Rule('$UserList', '$UserList $Word', sems0),
-    Rule('$UserList', '$Word $UserList', sems1),
 
         # intersection
     # Rule('$List', '$StringList $In $StringList', lambda (list1, in_, list2): ('.intersection', list1, list2)),
@@ -266,9 +263,6 @@ compositional_rules = [
     Rule('$Bool', '$Exists $IntToBool $TokenList', lambda sems: ('.call', sems[1], ('.count', sems[2]))),
     
     
-    # Rule('$PhraseList', '$PhraseList $Word', lambda sems: ('.filter_to_alnum', sems[0])),
-    # Rule('$PhraseList', '$Word $PhraseList', lambda sems: ('.filter_to_alnum', sems[1])),
-    Rule('$PhraseList', '$Word $PhraseList', sems1),
     Rule('$PhraseList', '$POS $PhraseList', lambda sems: ('.filter_by_attr', sems[1], ('.string', 'pos_tags'), sems[0])),
     Rule('$PhraseList', '$NER $PhraseList', lambda sems: ('.filter_by_attr', sems[1], ('.string', 'ner_tags'), sems[0])),
     Rule('$TokenList', '$PhraseList', lambda sems: ('.filter_to_tokens', sems[0])),

@@ -172,7 +172,13 @@ class CDRModel(SnorkelModel):
             }
             train_cands = self.session.query(self.candidate_class).filter(self.candidate_class.split == 0).all()
             examples = get_examples('semparse_cdr', train_cands)
-            sp = SemanticParser(self.candidate_class, user_lists)
+            sp = SemanticParser(
+                self.candidate_class, 
+                user_lists, 
+                beam_width=self.config['beam_width'], 
+                top_k=self.config['top_k'])
+            print("Generating LFs with beam_width={0}, top_k={1}".format(
+                self.config['beam_width'], self.config['top_k']))
             sp.evaluate(examples,
                         show_everything=False,
                         show_explanation=False,
@@ -193,13 +199,14 @@ class CDRModel(SnorkelModel):
                                      ('unknown', unknown)]:
                 if name in self.config['include']:
                     LFs += lf_group
+                    print("Keeping {0} {1} LFs...".format(len(lf_group), name))
                 else:
                     if len(lf_group) > 0:
                         print("Discarding {0} {1} LFs...".format(len(lf_group), name))
-            print("Keeping {0} LFs...".format(len(lf_group)))
-            if self.config['include_closer_LFs']:
+            if self.config['include_closer_lfs']:
                 from cdr_lfs import LF_closer_chem, LF_closer_dis
                 LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
+                print("Added 2 'closer' LFs...")
         else:
             raise Exception("Parameter 'source' must be in {'py', 'nl'}")
         

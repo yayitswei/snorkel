@@ -111,7 +111,7 @@ class SemanticParser():
                 print("Example {}: {}\n".format(i, example.explanation))
             if show_candidate:
                 print("CANDIDATE: {}\n".format(example.candidate))
-            if show_sentence:
+            if show_sentence and not isinstance(example.candidate[0], str):
                 print("SENTENCE: {}\n".format(example.candidate[0].get_parent()._asdict()['text']))
             semantics = set()
             explanation = example.explanation

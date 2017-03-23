@@ -437,6 +437,12 @@ test_examples = [
 #         candidate=-3658950303959694808,
 #         denotation=1,
 # semantics=None),
+    # Partially unparseable
+    Example(
+        explanation="label True because 1 is less than 2 and the moon is full",
+        candidate=('foo', 'bar'),
+        denotation=1,
+        semantics=None),
 ]
 
 

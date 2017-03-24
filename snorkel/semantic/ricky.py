@@ -38,6 +38,12 @@ lexical_rules = (
     [Rule('$All', w, '.all') for w in ['all']] +
     [Rule('$Any', w, '.any') for w in ['any', 'a']] +
     [Rule('$None', w, '.none') for w in ['none', 'not any', 'neither', 'no']] +
+    [Rule('$Is', w) for w in ['is', 'are', 'be', 'comes', 'appears', 'occurs']] +
+    [Rule('$Exists', w) for w in ['exist', 'exists']] +
+    [Rule('$Int', w, ('.int', 0)) for w in ['no']] +
+    [Rule('$Int', w,  ('.int', 1)) for w in ['immediately', 'right']] +
+    # Rule('$AtLeastOne', 'a', ('.geq', ('.int', 1))),
+    # Rule('$Int', 'a', ('.int', 1)),
     [Rule('$Because', w) for w in ['because', 'since', 'if']] +
     [Rule('$Upper', w, '.upper') for w in ['upper', 'uppercase', 'upper case', 'all caps', 'all capitalized']] +
     [Rule('$Lower', w, '.lower') for w in ['lower', 'lowercase', 'lower case']] +
@@ -48,12 +54,6 @@ lexical_rules = (
     [Rule('$AtLeast', w, '.geq') for w in ['at least', 'no less than', 'no smaller than', 'greater than or equal', '>=']] +
     [Rule('$MoreThan', w, '.gt') for w in ['more than', 'greater than', 'larger than', '>']] + 
     [Rule('$Within', w, '.within') for w in ['within']] +
-    [Rule('$Exists', w) for w in ['exist', 'exists']] +
-    [Rule('$Int', w, ('.int', 0)) for w in ['no']] +
-    [Rule('$Int', w,  ('.int', 1)) for w in ['immediately', 'right']] +
-    [Rule('$Is', w) for w in ['is', 'are', 'be', 'comes', 'appears', 'occurs']] +
-    # Rule('$AtLeastOne', 'a', ('.geq', ('.int', 1))),
-    # Rule('$Int', 'a', ('.int', 1)),
     [Rule('$In', w, '.in') for w in ['in']] +
     [Rule('$Contains', w, '.contains') for w in ['contains', 'contain', 'containing']] +
     [Rule('$StartsWith', w, '.startswith') for w in ['starts with', 'start with', 'starting with']] +

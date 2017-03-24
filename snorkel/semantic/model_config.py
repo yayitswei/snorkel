@@ -19,9 +19,7 @@ configuration = {
     'beam_width': 10,
     'top_k': -1,
     'filter_redundant_signatures': False,
-    'count_redundant_signatures': False,
     'filter_uniform_labels': False,
-    'count_uniform_labels': False,
     # restrictions
     'max_lfs': None,
     'max_train': None,

@@ -1,11 +1,5 @@
 from grammar import Rule
-
 import re
-
-stopwords = ['is', 'are', 'be', 'comes', 'appears', 'occurs', 
-             'a', 'an', 'the', 
-             'of', 'from', 'to', 
-             'also', 'too']
 
 class Annotator:
     """A base class for annotators."""
@@ -18,14 +12,6 @@ class TokenAnnotator(Annotator):
         # Quotation marks are hard stops to prevent merging of multiple strings
         if len(tokens) == 1 and tokens[0]['pos'] not in ["``", "\'\'"]:
             return [('$QueryToken', tokens[0]['word'])]
-        else:
-            return []
-
-class StopwordAnnotator(Annotator):
-    def annotate(self, tokens):
-        # Quotation marks are hard stops to prevent merging of multiple strings
-        if len(tokens) == 1 and tokens[0]['word'] in stopwords:
-            return [('$Stopword', tokens[0]['word'])]
         else:
             return []
 

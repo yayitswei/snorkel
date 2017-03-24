@@ -44,16 +44,13 @@ class Grammar(object):
         words = [t['word'] for t in tokens]
         self.words = words # TEMP (for print_chart)
         chart = defaultdict(list)
-        stopword_locs = []
-        for i in range(len(tokens)):
-            self.apply_annotators(chart, tokens, i, i + 1) # tokens[i:j] should be tagged?
-            stopword_locs.append(any(parse.rule.lhs == '$Stopword' for parse in chart[(i, i + 1)]))
         for j in range(1, len(tokens) + 1):
             for i in range(j - 1, -1, -1):
+                self.apply_annotators(chart, tokens, i, j) # tokens[i:j] should be tagged?
                 self.apply_user_lists(chart, words, i, j) # words[i:j] is the name of a UserList?
                 self.apply_lexical_rules(chart, words, i, j) # words[i:j] matches lexical rule?
                 self.apply_binary_rules(chart, i, j) # any split of words[i:j] matches binary rule?
-                self.apply_absorb_rules(chart, stopword_locs, i, j)
+                self.apply_absorb_rules(chart, i, j)
                 self.apply_unary_rules(chart, i, j) # add additional tags if chart[(i,j)] matches unary rule
                 if self.beam_width:
                     self.apply_beam(chart, i, j)
@@ -70,9 +67,9 @@ class Grammar(object):
                 parses = [p for p in parses if p.absorbed in levels[:k]]
             else:
                 parses = sorted(parses, key=lambda x: x.absorbed)[:self.top_k]
-        if len(parses) == 0:
-            self.print_chart(nested=False)
-            import pdb; pdb.set_trace()
+        # if len(parses) == 0:
+        #     self.print_chart(nested=False)
+        #     import pdb; pdb.set_trace()
         return parses
 
     def add_rule(self, rule):
@@ -190,18 +187,15 @@ class Grammar(object):
                 for rule in self.binary_rules[(parse_1.rule.lhs, parse_2.rule.lhs)]:
                     chart[(i, j)].append(Parse(rule, [parse_1, parse_2]))
     
-    def apply_absorb_rules(self, chart, stopword_locs, i, j):
+    def apply_absorb_rules(self, chart, i, j):
         """Add parses to chart cell (i, j) by applying binary rules."""
         if j - i > 2: # Otherwise, there's no chance for absorption
             for m in range(i + 1, j - 1):
                 for n in range(m + 1, j):
-                    # Don't absorb if we only want to absorb stopwords and these aren't all stopwords
-                    if not self.beam_width and not all(stopword_locs[m:n]):
-                        continue
                     for parse_1, parse_2 in product(chart[(i, m)], chart[(n, j)]):
-                        # Don't absorb quote marks
-                        # if any(parse.rule.lhs=='$Quote' for p in range(m, n) for parse in chart[(p, p+1)]):
-                        #     break
+                        # Don't absorb unmatched quote marks
+                        if sum(parse.rule.lhs=='$Quote' for p in range(m, n) for parse in chart[(p, p+1)]) % 2 != 0:
+                            break
                         for rule in self.binary_rules[(parse_1.rule.lhs, parse_2.rule.lhs)]:
                             # Don't allow $StringStub's to absorb (to control growth)
                             if rule.lhs=='$StringStub':

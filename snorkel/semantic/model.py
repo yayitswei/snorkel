@@ -151,10 +151,11 @@ class CDRModel(SnorkelModel):
         if self.config['source'] == 'py':
             from cdr_lfs import get_cdr_lfs
             LFs = get_cdr_lfs()
-            if not self.config['include_closer_lfs']:
+            if not self.config['include_py_only_lfs']:
                 for lf in list(LFs):
-                    if lf.__name__ in ['LF_closer_chem', 'LF_closer_dis']:
+                    if lf.__name__ in ['LF_closer_chem', 'LF_closer_dis', 'LF_ctd_marker_induce', 'LF_ctd_unspecified_induce']:
                         LFs.remove(lf)
+                print("Removed 4 'py only' LFs...")
         elif self.config['source'] == 'nl':
             with bz2.BZ2File(os.environ['SNORKELHOME'] + '/tutorials/cdr/data/ctd.pkl.bz2', 'rb') as ctd_f:
                 ctd_unspecified, ctd_therapy, ctd_marker = cPickle.load(ctd_f)
@@ -206,10 +207,10 @@ class CDRModel(SnorkelModel):
                 else:
                     if len(lf_group) > 0:
                         print("Discarding {0} {1} LFs...".format(len(lf_group), name))
-            if self.config['include_closer_lfs']:
-                from cdr_lfs import LF_closer_chem, LF_closer_dis
-                LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis], key=lambda x: x.__name__)
-                print("Added 2 'closer' LFs...")
+            if self.config['include_py_only_lfs']:
+                from cdr_lfs import LF_closer_chem, LF_closer_dis, LF_ctd_marker_induce, LF_ctd_unspecified_induce
+                LFs = sorted(LFs + [LF_closer_chem, LF_closer_dis, LF_ctd_marker_induce, LF_ctd_unspecified_induce], key=lambda x: x.__name__)
+                print("Added 4 'py only' LFs...")
         else:
             raise Exception("Parameter 'source' must be in {'py', 'nl'}")
         

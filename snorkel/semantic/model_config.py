@@ -18,8 +18,8 @@ configuration = {
     # filters
     'beam_width': 10,
     'top_k': -1,
-    'filter_redundant_signatures': False,
-    'filter_uniform_labels': False,
+    'filter_redundant_signatures': True,
+    'filter_uniform_labels': True,
     # restrictions
     'max_lfs': None,
     'max_train': None,
@@ -28,7 +28,7 @@ configuration = {
     'display_correlation': False,
     'display_marginals': False,
     # real-world conditions
-    'include_closer_lfs': False,
+    'include_py_only_lfs': False,
     'remove_paren': True,
     # testing
     'traditional': False, # e.g, 1000

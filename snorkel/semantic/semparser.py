@@ -6,7 +6,7 @@ from pandas import DataFrame, Series
 
 class SemanticParser():
     def __init__(self, candidate_class, user_lists={}, beam_width=None, top_k=None):
-        annotators = [TokenAnnotator(), StopwordAnnotator(), PunctuationAnnotator(), IntegerAnnotator()]
+        annotators = [TokenAnnotator(), PunctuationAnnotator(), IntegerAnnotator()]
         self.grammar = Grammar(rules=snorkel_rules, 
                                ops=snorkel_ops, 
                                candidate_class=candidate_class,
@@ -56,6 +56,7 @@ class SemanticParser():
     def evaluate(self, 
                 examples, 
                 show_everything=False,
+                show_nothing=False,
                 show_explanation=False, 
                 show_candidate=False,
                 show_sentence=False, 
@@ -68,18 +69,19 @@ class SemanticParser():
                 show_erroring=False,
                 show_unknown=False,
                 pseudo_python=False,
-                remove_paren=False,
+                remove_paren=True,
+                paraphrases=False,
                 only=[]):
         """Returns a pandas DataFrame with the explanations and various per-explanation stats"""
+        assert(not (show_everything and show_nothing))
         if show_everything:
             show_explanation = show_candidate = show_sentence = show_parse = show_semantics = True
         if show_semantics:
             show_correct = show_passing = show_failing = True
             show_redundant = show_erroring = show_unknown = True
-        # show_anything = (show_explanation or show_candidate or show_sentence or 
-        #                  show_parse or show_semantics or show_correct or 
-        #                  show_passing or show_failing or show_redundant or
-        #                  show_erroring or show_unknown)
+        if show_nothing:
+            show_explanation = show_candidate = show_sentence = show_parse = show_semantics = False
+            show_correct = show_passing = show_failing = show_redundant = show_erroring = show_unknown = False
         self.explanation_counter = 0
         examples = examples if isinstance(examples, list) else [examples]
         col_names = ['Correct', 'Passing', 'Failing', 'Redundant', 'Erroring', 'Unknown','Index']
@@ -104,17 +106,17 @@ class SemanticParser():
         for i, example in enumerate(examples):
             if only and i not in only:
                 continue
-            if example.explanation is None:
-                continue
+            # if example.explanation is None or (paraphrases and example.paraphrase is None):
+            #     continue
             indices.append(i)
+            explanation = example.explanation if not paraphrases else example.paraphrase
             if show_explanation: 
-                print("Example {}: {}\n".format(i, example.explanation))
+                print("Example {}: {}\n".format(i, explanation))
             if show_candidate:
                 print("CANDIDATE: {}\n".format(example.candidate))
             if show_sentence and not isinstance(example.candidate[0], str):
                 print("SENTENCE: {}\n".format(example.candidate[0].get_parent()._asdict()['text']))
             semantics = set()
-            explanation = example.explanation
             # TODO: remove remove_paren keyword and code
             if remove_paren:
                 explanation = explanation.replace('(', '')
@@ -123,11 +125,9 @@ class SemanticParser():
                         explanation, 
                         example.name,
                         return_parses=True)
-            # TEMP
-            # for parse in self.spurify(parses, spurious_sources=spurious_sources):
-            # TEMP
             for parse in parses:
                 # TEMP
+                # print parse.absorbed
                 # if parse.absorbed > 0:
                 #     import pdb; pdb.set_trace()
                 # TEMP
@@ -182,7 +182,7 @@ class SemanticParser():
                             
             if nCorrect[i] + nPassing[i] == 0:
                 print("WARNING: No correct or passing parses found for the following explanation:")
-                print("EXPLANATION: {}\n".format(example.explanation))
+                print("EXPLANATION {}: {}\n".format(i, explanation))
 
             if example.name:
                 example_names.append(example.name)
@@ -200,43 +200,3 @@ class SemanticParser():
         self.LFs = (correct_LFs, passing_LFs, failing_LFs, redundant_LFs, erroring_LFs, unknown_LFs)
         
         return DataFrame(data=d, index=example_names)[col_names]
-
-    # def spurify(self, parses, spurious_sources={}):
-    #     """
-    #     spurious_sources[key] = x
-    #     key: one of ['compare_op_swap', 'binary_op_swap', 'logic_op_swap', 
-    #                 'grouping', 'split_compound', 'off_by_one']
-    #     x: percentage of parses to be mutated by that spurious source
-    #     """        
-    #     compare_ops = ['.eq','.neq','.lt','.leq','.geq','.gt']
-    #     for parse in parses:
-    #         import pdb; pdb.set_trace()
-    #         yield parse
-    #         # determine which sources to use
-    #         for (source, prob) in spurious_sources.items():
-    #             if np.random.random() < prob:
-    #                 if source == 'compare_op_swap':
-
-    #                     op = parse.semantics[0]
-    #                     args = parse.semantics[1:]
-    #                     if op in compare_ops:
-    #                         print(parse.semantics)
-    #                         parse
-
-    #                     if parse.rule
-
-    #                 if self.rule.is_lexical():
-    #                     return self.rule.sem
-    #                 else:
-    #                     child_semantics = [child.semantics for child in self.children]
-    #                     return self.rule.apply_semantics(child_semantics)
-    #                 lf = self.grammar.evaluate(parse)
-    #                 parse.function = lf
-    #                 yield parse
-    #         import pdb; pdb.set_trace()
-        
-    #     def __init__(self, rule, children):
-    #     self.rule = rule
-    #     self.children = tuple(children[:])
-    #     self.semantics = self.compute_semantics()
-    #     self.validate_parse()

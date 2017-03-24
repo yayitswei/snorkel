@@ -17,7 +17,6 @@ from snorkel.learning.structure import DependencySelector
 from snorkel.semantic import SemanticParser
 
 # Python
-from pprint import pprint
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -25,6 +24,8 @@ import random
 import csv
 import cPickle
 import bz2
+from pprint import pprint
+from scipy.sparse import coo_matrix
 
 TRAIN = 0
 DEV = 1
@@ -189,12 +190,14 @@ class CDRModel(SnorkelModel):
                         show_correct=False,
                         pseudo_python=False,
                         remove_paren=self.config['remove_paren'],
+                        paraphrases=self.config['paraphrases'],
                         only=[])
             (correct, passing, failing, redundant, erroring, unknown) = sp.LFs
             LFs = []
             for (name, lf_group) in [('correct', correct),
                                      ('passing', passing),
                                      ('failing', failing),
+                                     ('redundant', redundant),
                                      ('erroring', erroring),
                                      ('unknown', unknown)]:
                 if name in self.config['include']:
@@ -222,8 +225,8 @@ class CDRModel(SnorkelModel):
             self.config = config
         
         if self.LFs is None:
+            print("Running generate_lfs() first...")
             self.generate_lfs()
-            print("Running generate_lfs() first...")        
         labeler = LabelAnnotator(f=self.LFs)
         for split in self.config['splits']:
             nCandidates = self.session.query(self.candidate_class).filter(self.candidate_class.split == split).count()
@@ -235,9 +238,10 @@ class CDRModel(SnorkelModel):
                     training_set_summary_stats(L, return_vals=False, verbose=True)
         self.labeler = labeler
 
-        if self.config['filter_redundant_signature'] or self.config['count_twins']:
+        if self.config['filter_redundant_signatures'] or self.config['count_redundant_signatures']:
             n_twins = 0
             signatures = set()
+            L_train = self.labeler.load_matrix(self.session, split=TRAIN)
             L_train_coo = coo_matrix(L_train)
             row = L_train_coo.row
             col = L_train_coo.col
@@ -246,20 +250,21 @@ class CDRModel(SnorkelModel):
                 signature = hash((hash(tuple(row[col==i])),hash(tuple(data[col==i]))))
                 if signature in signatures:
                     n_twins += 1
-                    if self.config['filter_redundant_signature']:
+                    if self.config['filter_redundant_signatures']:
                         # Add i to list of columns to remove
                         raise NotImplementedError
                 else:
                     signatures.add(signature)
-            if self.config['filter_redundant_signature']:
+            if self.config['filter_redundant_signatures']:
                 print("Redundant signature filter removed {} LFs".format(n_twins))
             else:    
-                print("Counted {} LFs with redundant signature".format(n_twins))
+                print("Counted {} LFs with redundant signatures".format(n_twins))
 
         if self.config['filter_uniform_labels'] or self.config['count_uniform_labels']:
             n_useless = 0
             for i in range(L_train.shape[1]):
                 if np.sum(L_train[:,i]) == L_train.shape[0]:
+                    n_useless += 1
                     if self.config['filter_uniform_labels']:
                         # Add i to list of columns to remove
                         raise NotImplementedError

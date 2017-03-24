@@ -11,15 +11,17 @@ configuration = {
     # source
     'source': 'py',
     'include': ['correct', 'passing'],
+    'paraphrases': False,
     # settings
     'model_dep': False,
     'majority_vote': False,
     # filters
     'beam_width': 10,
-    'top_k': None,
-    'filter_redundant_signature': False,
-    'count_redundant_signature': False,
+    'top_k': -1,
+    'filter_redundant_signatures': False,
+    'count_redundant_signatures': False,
     'filter_uniform_labels': False,
+    'count_uniform_labels': False,
     # restrictions
     'max_lfs': None,
     'max_train': None,

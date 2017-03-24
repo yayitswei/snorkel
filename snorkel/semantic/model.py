@@ -235,7 +235,8 @@ class CDRModel(SnorkelModel):
                     training_set_summary_stats(L, return_vals=False, verbose=True)
         self.labeler = labeler
 
-        if self.config['remove_twins']:
+        if self.config['filter_redundant_signature'] or self.config['count_twins']:
+            n_twins = 0
             signatures = set()
             L_train_coo = coo_matrix(L_train)
             row = L_train_coo.row
@@ -244,16 +245,29 @@ class CDRModel(SnorkelModel):
             for i in range(L_train.shape[1]):
                 signature = hash((hash(tuple(row[col==i])),hash(tuple(data[col==i]))))
                 if signature in signatures:
-                    # Add i to list of columns to remove
-                    raise NotImplementedError
+                    n_twins += 1
+                    if self.config['filter_redundant_signature']:
+                        # Add i to list of columns to remove
+                        raise NotImplementedError
                 else:
                     signatures.add(signature)
+            if self.config['filter_redundant_signature']:
+                print("Redundant signature filter removed {} LFs".format(n_twins))
+            else:    
+                print("Counted {} LFs with redundant signature".format(n_twins))
 
-        if self.config['remove_useless']:
+        if self.config['filter_uniform_labels'] or self.config['count_uniform_labels']:
+            n_useless = 0
             for i in range(L_train.shape[1]):
                 if np.sum(L_train[:,i]) == L_train.shape[0]:
-                    # Add i to list of columns to remove
-                    raise NotImplementedError
+                    if self.config['filter_uniform_labels']:
+                        # Add i to list of columns to remove
+                        raise NotImplementedError
+            if self.config['filter_uniform_labels']:
+                print("Uniform labels filter removed {} LFs".format(n_useless))
+            else:    
+                print("Counted {} LFs with uniform labels".format(n_useless))
+            
 
     def supervise(self, config=None):
         if config:

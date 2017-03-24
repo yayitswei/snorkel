@@ -17,8 +17,9 @@ configuration = {
     # filters
     'beam_width': 10,
     'top_k': None,
-    'remove_twins': False,
-    'remove_useless': False,
+    'filter_redundant_signature': False,
+    'count_redundant_signature': False,
+    'filter_uniform_labels': False,
     # restrictions
     'max_lfs': None,
     'max_train': None,

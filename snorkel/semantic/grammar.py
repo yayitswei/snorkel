@@ -42,7 +42,7 @@ class Grammar(object):
         stop = {'word': '<STOP>', 'pos': '<STOP>', 'ner': '<STOP>'}
         tokens = [start] + tokens + [stop]
         words = [t['word'] for t in tokens]
-        self.words = words # TEMP (for print_chart)
+        self.words = words # (for print_chart)
         chart = defaultdict(list)
         for j in range(1, len(tokens) + 1):
             for i in range(j - 1, -1, -1):

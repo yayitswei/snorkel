@@ -148,22 +148,20 @@ compositional_rules = [
 
     # Parentheses
     Rule('$Bool', '$OpenParen $Bool $CloseParen', lambda (open_, bool_, close_): bool_),
-    # Rule('$StringListAnd', '$OpenParen $StringListAnd $CloseParen', lambda (open_, list_, close_): list_),
-    # Rule('$StringListOr', '$OpenParen $StringListOr $CloseParen', lambda (open_, list_, close_): list_),
 
     ### Strings ###
         # building strings of arbitrary length
     # Rule('$StringStub', '$Quote $QueryToken', lambda sems: [sems[1]]),
     # Rule('$StringStub', '$StringStub $QueryToken', lambda sems: sems[0] + [sems[1]]),
     # Rule('$String', '$StringStub $Quote', lambda sems: ('.string', ' '.join(sems[0]))),
-        # building strings of max length 5
+        # building strings of max length 5 (allows us to reduce beam width)
     Rule('$String', '$Quote $QueryToken $Quote', lambda sems: ('.string', ' '.join(sems[1:2]))),
     Rule('$String', '$Quote $QueryToken $QueryToken $Quote', lambda sems: ('.string', ' '.join(sems[1:3]))),
     Rule('$String', '$Quote $QueryToken $QueryToken $QueryToken $Quote', lambda sems: ('.string', ' '.join(sems[1:4]))),
     Rule('$String', '$Quote $QueryToken $QueryToken $QueryToken $QueryToken $Quote', lambda sems: ('.string', ' '.join(sems[1:5]))),
     Rule('$String', '$Quote $QueryToken $QueryToken $QueryToken $QueryToken $QueryToken $Quote', lambda sems: ('.string', ' '.join(sems[1:6]))),
 
-        # building string lists (TODO: remove some redundancies here?)
+        # building string lists
     Rule('$StringListStub', '$String ?$Separator $String', lambda sems: ('.list', sems[0], sems[2])),
     Rule('$StringListStub', '$StringListStub ?$Separator $String', lambda sems: tuple((list(sems[0]) + [sems[2]]))),
     
@@ -199,10 +197,6 @@ compositional_rules = [
     Rule('$StringToBool', '$BinaryStringToBool $StringListOr', lambda sems: ('.composite_or',  (sems[0],), sems[1])),
     Rule('$StringToBool', '$BinaryStringToBool $UserList', lambda sems: ('.composite_or',  (sems[0],), sems[1])),
     
-
-        # intersection
-    # Rule('$List', '$StringList $In $StringList', lambda (list1, in_, list2): ('.intersection', list1, list2)),
-
     ### Integers ###
         # applying $IntoToBool functions
     Rule('$Bool', '$Int $IntToBool', lambda sems: ('.call', sems[1], sems[0])),
@@ -234,55 +228,34 @@ compositional_rules = [
         # inverted directions
     Rule('$PhraseList', '$ArgX $Direction', lambda (arg_, dir_): (flip_dir(dir_), arg_)),
 
-        # implicit 'in'
-    # Rule('$StringToBool', '$StringAndArgToBool $ArgX', sems_in_order),
-    # Rule('$StringToBool', '$StringAndArgToBool $ArgXOr', lambda sems: ('.composite_or', (sems[0],), sems[1])),
-    # Rule('$StringToBool', '$StringAndArgToBool $ArgXAnd', lambda sems: ('.composite_and', (sems[0],), sems[1])),
 
-            # "is left of Y"
+    ### Direction ###
+        # "is left of Y"
     Rule('$StringToBool', '$Direction $ArgX',
         lambda (dir_, arg_): ('.in', ('.extract_text', (dir_, arg_)))),
 
-            # "is two words left of Y"
+        # "is two words left of Y"
     Rule('$StringToBool', '$Int ?$Unit $Direction $ArgX', 
         lambda (int_, unit_, dir_, arg_): ('.in', ('.extract_text', 
             (dir_, arg_, ('.string', '.eq'), int_, ('.string', (unit_ if unit_ else 'words')))))),
-            # "X is immediately before"    
+        # "X is immediately before"    
     Rule('$StringToBool', '$ArgX $Int ?$Unit $Direction', 
         lambda (arg_, int_, unit_, dir_): ('.in', ('.extract_text', 
             (flip_dir(dir_), arg_, ('.string', '.eq'), int_, ('.string', (unit_ if unit_ else 'words')))))),
-            # "is at least 40 words to the left of"
-    
+        
+        # "is at least 40 words to the left of"
     Rule('$StringToBool', '$Compare $Int ?$Unit $Direction $ArgX', 
         lambda (cmp_, int_, unit_, dir_, arg_): ('.in', ('.extract_text', 
             (dir_, arg_, ('.string', cmp_), int_,('.string', (unit_ if unit_ else 'words')))))), 
-            # "is to the left of Y by at least 40 words"
+        # "is to the left of Y by at least 40 words"
     Rule('$StringToBool', '$Direction $ArgX $Compare $Int ?$Unit', 
         lambda (dir_, arg_, cmp_, int_, unit_): ('.in', ('.extract_text', 
             (dir_, arg_, ('.string', cmp_), int_,('.string', (unit_ if unit_ else 'words')))))), 
-            # "between X and Y"
-    
+        
+        # "between X and Y"
     Rule('$StringToBool', '$Between $ArgXAnd', 
         lambda (btw_, arglist_): 
             ('.in', ('.extract_text', (btw_, arglist_)))), 
-    # Indices
-    # Rule('$PhraseListOr', '$String', lambda (str_,): ('.str_to_phrases', str_)),
-    # Rule('$Phrase', '$ArgX', lambda (arg_,): ('.arg_to_phrase', arg_)),
-    # Rule('$Bool', '$Phrase $PhraseToBool', lambda (phr_, func_): ('.call', func_, phr_)),
-    #     # "is left of (the word) Y"
-    # Rule('$PhraseToBool', '$Direction $Phrase', 
-    #     lambda (dir_, phr_): (dir_, ('.gt',), ('.int', 0), phr_)),
-    #     # "is two words left of Y"
-    # Rule('$PhraseToBool', '$Int ?$Word $Direction $Phrase', 
-    #     lambda (int_, word_, dir_, phr_): (dir_, ('.eq',), int_, phr_)),
-    #     # "is more than two words left of Y"
-    # Rule('$PhraseToBool', '$Compare $Int ?$Word $Direction $Phrase', 
-    #     lambda (cmp_, int_, word_, dir_, phr_): (dir_, (cmp_,), int_, phr_)),
-    #     # "is within two words of Y"
-    # Rule('$PhraseToBool', '$WithIO $Int ?$Word $Phrase', 
-    #     lambda (win_, int_, word_, phr_): (win_, int_, phr_)),
-    #     # "is between X and Y"
-    # # Rule('$PhraseToBool', TBD, lambda sems: TBD,
         
     # Count
             # "the number of (words left of arg 1) is 5"
@@ -302,7 +275,6 @@ compositional_rules = [
     Rule('$Bool', '$Exists $Int $TokenList', lambda sems: ('.call', ('.eq', sems[1]), ('.count', sems[2]))), 
             # "there are at least two nouns to the left..."
     Rule('$Bool', '$Exists $IntToBool $TokenList', lambda sems: ('.call', sems[1], ('.count', sems[2]))),
-    
     
     Rule('$PhraseList', '$POS $PhraseList', lambda sems: ('.filter_by_attr', sems[1], ('.string', 'pos_tags'), sems[0])),
     Rule('$PhraseList', '$NER $PhraseList', lambda sems: ('.filter_by_attr', sems[1], ('.string', 'ner_tags'), sems[0])),
@@ -374,20 +346,15 @@ snorkel_ops = {
     # sets
     '.left': lambda *x: lambda cx: cx['lf_helpers']['get_left_phrases'](*[xi(cx) for xi in x]),
     '.right': lambda *x: lambda cx: cx['lf_helpers']['get_right_phrases'](*[xi(cx) for xi in x]),
-        # '.left': lambda *x: lambda cx: lambda y: lambda cy: cx['lf_helpers']['get_left_phrases'](y(cy), *[xi(cx) for xi in x]),
-        # '.right': lambda *x: lambda cx: lambda y: lambda cy: cx['lf_helpers']['get_right_phrases'](y(cy), *[xi(cx) for xi in x]),
-        # '.within': lambda *x: lambda c: c['lf_helpers']['get_within_phrases'](*[xi(c) for xi in x]),
     '.between': lambda x: lambda c: c['lf_helpers']['get_between_phrases'](*[xi for xi in x(c)]),
     '.sentence': lambda c: c['lf_helpers']['get_sentence_phrases'](c['candidate'][0]),
     '.extract_text': lambda phrlist: lambda c: [getattr(p, 'text') for p in phrlist(c)],
-    # '.extract_field': lambda phrlist, attr: lambda c: [getattr(t, attr(c)) for t in phrlist(c)],
-        # TODO: allow multiple-word nouns, etc.
     '.filter_by_attr': lambda phrlist, attr, val: lambda c: [p for p in phrlist(c) if getattr(p, attr(c))[0] == val(c)],
-    # '.filter_to_alnum': lambda phrlist: lambda c: [p for p in phrlist(c) if any(letter.isalnum() for letter in getattr(p, 'words'))],
     '.filter_to_tokens': lambda phrlist: lambda c: [p for p in phrlist(c) if len(getattr(p, 'words')) == 1],
     }
 
 def sem_to_str(sem):
+    # NOTE: only partially complete, many ops still missing
     str_ops = {
         '.root': lambda LF: recurse(LF),
         '.label': lambda label, cond: "return {} if {} else 0".format(1 if recurse(label)=='True' else -1, recurse(cond)),
@@ -407,8 +374,6 @@ def sem_to_str(sem):
         '.all': lambda x: "all({})".format(recurse(x)),
         '.any': lambda x: "any({})".format(recurse(x)),
         '.none': lambda x: "not any({})".format(recurse(x)),
-
-        # '.composite_or': lambda func_, list_: "any({}({}))".format(recurse(func_), recurse(list_)),
 
         '.geq': lambda x: "(>= {})".format(recurse(x)),
 
@@ -440,23 +405,3 @@ def sem_to_str(sem):
         else:
             return str(sem)
     return recurse(sem)
-        
-
-
-### DEPRECATED:
-    # indices
-    # '.arg_to_phrase': lambda arg_: lambda c: c['lf_helpers']['get_phrase_from_span'](arg_(c)),
-    # '.str_to_phrases': lambda str_: lambda c: c['lf_helpers']['get_phrases_from_text'](c['candidate'][0].get_parent(), str_(c)),
-    # '.left': lambda cmp_, int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
-    #     getattr(lhs(clhs),'word_offsets')[0] < getattr(rhs(crhs),'word_offsets')[0] and # left condition
-    #     cmp_(lambda c: -(getattr(rhs(crhs),'word_offsets')[0]) + int_(clhs))(crhs)
-    #         (lambda c: -(getattr(lhs(clhs),'word_offsets')[0]))(clhs)),
-    # '.right': lambda cmp_, int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
-    #     getattr(lhs(clhs),'word_offsets')[-1] > getattr(rhs(crhs),'word_offsets')[-1] and # right condition
-    #     cmp_(lambda c: getattr(rhs(crhs),'word_offsets')[-1] + int_(clhs))(crhs)
-    #     (lambda c: getattr(lhs(clhs),'word_offsets')[-1])(clhs)),
-    # '.between':
-    # '.within': lambda int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
-    #     abs(getattr(lhs(clhs),'word_offsets')[-1] - getattr(rhs(crhs),'word_offsets')[-1]) <= int_(crhs)),
-    # '.without': lambda int_, rhs: lambda crhs: lambda lhs: lambda clhs: (
-    #     abs(getattr(lhs(clhs),'word_offsets')[-1] - getattr(rhs(crhs),'word_offsets')[-1]) > int_(crhs)),

@@ -1,5 +1,5 @@
 from grammar import Grammar
-from ricky import snorkel_rules, snorkel_ops, sem_to_str
+from snorkel_grammar import snorkel_rules, snorkel_ops, sem_to_str
 from annotator import *
 
 from pandas import DataFrame, Series
@@ -126,11 +126,6 @@ class SemanticParser():
                         example.name,
                         return_parses=True)
             for parse in parses:
-                # TEMP
-                # print parse.absorbed
-                # if parse.absorbed > 0:
-                #     import pdb; pdb.set_trace()
-                # TEMP
                 if show_parse:
                     print("PARSE: {}\n".format(parse))
                 semantics_ = sem_to_str(parse.semantics) if pseudo_python else parse.semantics

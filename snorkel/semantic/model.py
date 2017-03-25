@@ -32,6 +32,9 @@ DEV = 1
 TEST = 2
 
 class SnorkelModel(object):
+    """
+    A class for running a complete Snorkel pipeline
+    """
     def __init__(self, session, candidate_class, config):
         self.session = session
         self.candidate_class = candidate_class
@@ -76,6 +79,9 @@ class SnorkelModel(object):
         raise NotImplementedError
 
 class CDRModel(SnorkelModel):
+    """
+    A class specifically intended for use with the CDR task/tutorial/dataset
+    """
     def parse(self, file_path=(os.environ['SNORKELHOME'] + '/tutorials/cdr/data/CDR.BioC.xml'), clear=True):
         doc_preprocessor = XMLMultiDocPreprocessor(
             path=file_path,
@@ -215,7 +221,8 @@ class CDRModel(SnorkelModel):
             raise Exception("Parameter 'source' must be in {'py', 'nl'}")
         
         if self.config['max_lfs']:
-            np.random.seed(self.config['seed'])
+            if self.config['seed']:
+                np.random.seed(self.config['seed'])
             np.random.shuffle(LFs)
             LFs = LFs[:self.config['max_lfs']]
         self.LFs = LFs
@@ -239,10 +246,6 @@ class CDRModel(SnorkelModel):
                     L = SnorkelModel.label(self, labeler, split)
                     if split==TRAIN:
                         L_train = L
-                    # TEMP
-                    # L = labeler.apply(split=DEV, parallelism=self.config['parallelism'])
-                    # L_train = L
-                    # TEMP
                     nCandidates, nLabels = L.shape
                     if self.config['verbose']:
                         print("\nLabeled split {}: ({},{}) sparse (nnz = {})".format(split, nCandidates, nLabels, L.nnz))
@@ -344,12 +347,10 @@ class CDRModel(SnorkelModel):
         if config:
             self.config = config
 
-        train_marginals = load_marginals(self.session, split=TRAIN)
+        if self.config['seed']:
+            np.random.seed(self.config['seed'])
 
-        # TEMP
-        # np.random.seed(kwargs.pop('seed', 0))
-        np.random.seed(self.config['seed'])
-        # TEMP
+        train_marginals = load_marginals(self.session, split=TRAIN)
 
         if DEV in self.config['splits']:
             L_gold_dev = load_gold_labels(self.session, annotator_name='gold', split=DEV)

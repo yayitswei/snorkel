@@ -9,7 +9,7 @@ configuration = {
 
     # Supervision
     # source
-    'source': 'py',
+    'source': 'py', # {'py', 'nl'}
     'include': ['correct', 'passing'],
     'paraphrases': False,
     # settings

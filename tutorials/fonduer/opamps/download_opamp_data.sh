@@ -5,7 +5,7 @@ data_zip=opamp_dataset
 wget -N -O opamp_dataset.zip -q --show-progress $url
 
 echo "Unpacking opamp data..."
-unzip -l -o  $data_zip.zip -d data
+unzip -o  $data_zip.zip -d data
 
 echo "Deleting zip file..."
 rm $data_zip.zip
